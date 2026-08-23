@@ -14,7 +14,11 @@ plugins {
     // "the plugin is already on the classpath with an unknown version" on real CI runs.
     id("com.android.application") version "8.4.2"
     kotlin("android")
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    // TEMPORARILY REMOVED as a diagnostic step: the exact same BaseVariant failure
+    // reproduced under both Kotlin 2.0.21 and 1.9.24, which KSP was the one plugin
+    // present in every single attempt so far. Testing whether it's the actual common
+    // factor before spending another round guessing AGP/Kotlin/Gradle versions.
+    // id("com.google.devtools.ksp") version "1.9.24-1.0.20"
 }
 
 // NOTE ON BUILD VERIFICATION (see /docs/DEVIATIONS.md):
@@ -86,7 +90,7 @@ dependencies {
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    // ksp("androidx.room:room-compiler:2.6.1") // see the plugins{} block above
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
