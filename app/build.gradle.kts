@@ -1,24 +1,22 @@
 plugins {
-    // kotlin("android") 2.0.21's Android target reflects on
-    // com.android.build.gradle.api.BaseVariant at configuration time and fails with
-    // NoClassDefFoundError on that class when paired with com.android.application, no
-    // matter which AGP 8.4/8.5 point release or Gradle 8.6-8.14 was tried (all reproduced
-    // for real on CI; see docs/DEVIATIONS.md) — a K2/new-target-rewrite regression in
-    // Kotlin 2.0.x's Android plugin, not an AGP version issue. Kotlin 1.9.24's
-    // (pre-rewrite) android plugin uses the same BaseVariant-based API directly and does
-    // not hit it.
+    // NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced
+    // identically across AGP 8.5.2/8.4.2, Gradle 8.14.3/8.6, Kotlin 2.0.21/1.9.24, and
+    // with/without KSP (8 straight CI runs — see docs/DEVIATIONS.md and this branch's
+    // commit history). A CI run with --info logging showed the real AGP jar (with
+    // BaseVariant) DOES resolve onto the classpath alongside a separate, lean
+    // com.android.tools.build:gradle-api jar (the New Variant API surface, which does not
+    // ship BaseVariant) — pointing at a plugin-classloader interaction, not a missing
+    // artifact. AGP 8.5.2 + Kotlin 1.9.24 + Gradle 8.7 is the specific trio actually
+    // shipped together in Android Studio's own Compose project template for this Kotlin
+    // line, so it's the next attempt instead of another blind version guess.
     //
-    // No version here: it's pinned once via the root build.gradle.kts apply-false
-    // declaration (kept in sync with :core's kotlin("jvm") version there) and must stay
-    // that way — repeating a version here alongside the root's apply-false entry produced
-    // "the plugin is already on the classpath with an unknown version" on real CI runs.
-    id("com.android.application") version "8.4.2"
+    // No version here for kotlin("android"): pinned once via the root build.gradle.kts
+    // apply-false declaration (kept in sync with :core's kotlin("jvm") version there) —
+    // repeating a version here alongside the root's apply-false entry produced "the plugin
+    // is already on the classpath with an unknown version" on a real CI run.
+    id("com.android.application") version "8.5.2"
     kotlin("android")
-    // TEMPORARILY REMOVED as a diagnostic step: the exact same BaseVariant failure
-    // reproduced under both Kotlin 2.0.21 and 1.9.24, which KSP was the one plugin
-    // present in every single attempt so far. Testing whether it's the actual common
-    // factor before spending another round guessing AGP/Kotlin/Gradle versions.
-    // id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
 }
 
 // NOTE ON BUILD VERIFICATION (see /docs/DEVIATIONS.md):
@@ -90,7 +88,7 @@ dependencies {
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    // ksp("androidx.room:room-compiler:2.6.1") // see the plugins{} block above
+    ksp("androidx.room:room-compiler:2.6.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
