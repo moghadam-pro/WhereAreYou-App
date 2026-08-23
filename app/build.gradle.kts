@@ -34,6 +34,47 @@ buildscript {
 }
 
 apply(plugin = "com.android.application")
+
+// DIAGNOSTIC (temporary): 22 straight CI runs hit the identical NoClassDefFoundError:
+// BaseVariant regardless of AGP/Gradle/Kotlin version or plugin-application mechanism
+// (string ID via plugins{}, string ID via apply(), or direct class apply via
+// pluginManager.apply(Class) — all three funnel into the same internal
+// KotlinAndroidPlugin.apply() -> dynamicallyApplyWhenAndroidPluginIsApplied ->
+// objects.newInstance(KotlinAndroidTarget::class) call). Inspect the ACTUAL runtime
+// classloader that loaded KotlinAndroidTarget directly, rather than just checking file
+// presence on the classpath configuration (already proven present as a file, but that
+// doesn't prove it's reachable from the specific classloader Gradle uses here).
+run {
+    val katClass = org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget::class.java
+    val katLoader = katClass.classLoader
+    val myLoader = object {}.javaClass.classLoader
+    println("DIAGNOSTIC: KotlinAndroidTarget loaded by classloader = $katLoader")
+    println("DIAGNOSTIC: this script's own classloader              = $myLoader")
+    println("DIAGNOSTIC: same classloader instance? ${katLoader === myLoader}")
+    val loadable = try {
+        Class.forName("com.android.build.gradle.api.BaseVariant", false, katLoader)
+        true
+    } catch (e: Throwable) {
+        false
+    }
+    println("DIAGNOSTIC: BaseVariant loadable from KotlinAndroidTarget's own classloader = $loadable")
+    val loadableFromMine = try {
+        Class.forName("com.android.build.gradle.api.BaseVariant", false, myLoader)
+        true
+    } catch (e: Throwable) {
+        false
+    }
+    println("DIAGNOSTIC: BaseVariant loadable from this script's classloader = $loadableFromMine")
+    // Walk the classloader parent chain of both, looking for where they diverge.
+    var l: ClassLoader? = katLoader
+    var depth = 0
+    while (l != null && depth < 10) {
+        println("DIAGNOSTIC: KotlinAndroidTarget loader chain[$depth] = $l")
+        l = l.parent
+        depth++
+    }
+}
+
 project.pluginManager.apply(org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPluginWrapper::class.java)
 
 plugins {
