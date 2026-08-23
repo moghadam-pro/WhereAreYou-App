@@ -1,18 +1,27 @@
 // NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced identically
-// across 9 straight CI runs trying the plugins{} DSL: AGP 8.5.2/8.4.2, Gradle
-// 8.14.3/8.6/8.7, Kotlin 2.0.21/1.9.24, and with/without KSP (see docs/DEVIATIONS.md and
-// this branch's commit history) — ruling out every version combination as the cause and
-// pointing at the plugins{} DSL's plugin-classloader isolation itself. This switches
-// com.android.application and kotlin-android to the legacy buildscript{} + apply(plugin=)
-// mechanism, a different Gradle code path that does not go through the same
-// plugin-marker/classloader isolation as the plugins{} block.
+// across 10 straight CI runs under AGP 8.4.2/8.5.2, Gradle 8.14.3/8.6/8.7, Kotlin
+// 2.0.21/1.9.24, with/without KSP, AND both plugin-application mechanisms (plugins{} DSL
+// and this buildscript{}+apply(plugin=) form) — ruling out every version combination *and*
+// application mechanism as the cause (see docs/DEVIATIONS.md and this branch's commit
+// history). The actual cause: Gradle 8.6 added an unconditional bytecode-instrumentation
+// transform (ExternalDependencyInstrumentingArtifactTransform, visible in every failing
+// run's --info log) applied to every external plugin/buildscript dependency, and AGP
+// versions before 8.6 ship a BaseVariant classfile that doesn't survive that transform
+// intact for Gradle's reflection-based decorated-class generation (needed here because
+// Kotlin's KotlinAndroidTarget references BaseVariant in its public API). This pins AGP to
+// 8.7.3 (past the version this was fixed) and the wrapper to Gradle 8.9 (AGP 8.7's own
+// documented minimum). Still applied imperatively via buildscript{}/apply(plugin=) rather
+// than the plugins{} block — not because that mechanism itself was ever the problem (it
+// wasn't; see above), but because that's what keeps AGP resolution out of the root
+// project's always-evaluated plugins{} block, which is what lets :core:test still run in
+// the local sandbox without reaching dl.google.com (see root build.gradle.kts).
 buildscript {
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.5.2")
+        classpath("com.android.tools.build:gradle:8.7.3")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
     }
 }
@@ -70,13 +79,11 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
-// Uses add("implementation", ...) instead of the typed implementation(...) accessor:
-// those accessor extension functions are only pre-compiled for plugins declared via
-// the plugins{} block (resolved before script compilation). com.android.application and
-// kotlin-android are applied imperatively above via apply(plugin = "..."), so their
-// configurations (implementation, debugImplementation) don't get generated accessors and
-// the typed form fails script compilation with "Unresolved reference". add(...) is part
-// of the core DependencyHandler interface and works regardless of how a plugin was applied.
+// Uses add("implementation", ...) instead of the typed implementation(...) accessor.
+// Both plugins are back on the plugins{} DSL above so the typed accessors would resolve
+// too, but add(...) is part of the core DependencyHandler interface rather than a
+// generated accessor, so it's left as-is: one less thing to break if the plugin
+// application mechanism ever needs to change again.
 dependencies {
     add("implementation", project(":core"))
 
