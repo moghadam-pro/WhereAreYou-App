@@ -29,16 +29,22 @@ Consequences:
   without the Android SDK.
 - A `.github/workflows/build-debug-apk.yml` CI workflow now does what this sandbox cannot:
   on a GitHub-hosted runner (full internet, preinstalled Android SDK) it runs
-  `:core:test` then `:app:assembleDebug` and uploads the resulting debug APK. Its **first**
-  run caught a real bug review alone had missed: `com.android.application` 8.5.2 paired
-  with `kotlin("android")` 2.0.21 failed with
-  `NoClassDefFoundError: com/android/build/gradle/api/BaseVariant` — AGP 8.5.x had already
-  dropped a class the Kotlin Gradle Plugin's Android target still reflects on at
-  configuration time. Fixed by pinning AGP to 8.4.2 (the last patch in Kotlin 2.0.21's
-  documented supported range that still ships that class) and `compileSdk`/`targetSdk` to
-  34 to match. This is exactly why this document says "review is not a build" above — treat
-  `:app` as verified only as of the last **green** run of that workflow, not as of the last
-  time someone read the code.
+  `:core:test` then `:app:assembleDebug` and uploads the resulting debug APK. Its first two
+  runs caught a real bug review alone had missed:
+  `NoClassDefFoundError: com/android/build/gradle/api/BaseVariant` while applying
+  `kotlin("android")` on top of `com.android.application`. The first fix attempt (pin AGP
+  8.5.2 -> 8.4.2) did **not** resolve it — the identical failure reproduced against 8.4.2
+  too, which ruled out "wrong AGP version" as the cause. The actual mismatch was the
+  **Gradle version**: the wrapper had been regenerated at Gradle 8.14.3 (this sandbox's
+  system Gradle, used only to bootstrap the wrapper — see the git history of
+  `gradle/wrapper/gradle-wrapper.properties`), which is newer than Kotlin Gradle Plugin
+  2.0.21's supported range. Fixed by pinning the wrapper back to Gradle 8.6 — the floor AGP
+  8.4.x itself requires, and inside Kotlin 2.0.21's supported ceiling — so all three
+  (Gradle/AGP/Kotlin) now sit in mutually compatible ranges instead of just two. This is
+  exactly why this document says "review is not a build" above — treat `:app` as verified
+  only as of the last **green** run of that workflow, not as of the last time someone read
+  the code, and re-read that run's actual failure before assuming which component is at
+  fault: the obvious culprit (AGP) was not the real one.
 
 This is unrelated to the actual Google Play SMS/Call-Log policy restriction discussed in
 `SECURITY_PRIVACY.md` section 17 and `PRODUCT_SPEC.md` section 18 — that one is a real
