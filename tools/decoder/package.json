@@ -1,0 +1,9 @@
+{
+  "name": "whereareyou-decoder",
+  "private": true,
+  "type": "module",
+  "description": "Offline static SMS status decoder/PWA for WhereAreYou (no backend, no build step, no dependencies).",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

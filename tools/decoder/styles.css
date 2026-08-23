@@ -1,0 +1,250 @@
+:root {
+  --bg: #f6f8f5;
+  --fg: #1c2b22;
+  --muted: #5a6b60;
+  --panel: #ffffff;
+  --border: #d7ded6;
+  --accent: #1b4332;
+  --accent-contrast: #ffffff;
+  --danger: #7a2e2e;
+  --danger-bg: #fbeaea;
+  --best: #e8f3ec;
+  --best-border: #2d6a4f;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121712;
+    --fg: #e6ece7;
+    --muted: #9db0a3;
+    --panel: #1a201b;
+    --border: #2b332c;
+    --accent: #52796f;
+    --accent-contrast: #06110b;
+    --danger: #e6a3a3;
+    --danger-bg: #2b1717;
+    --best: #16241c;
+    --best-border: #52796f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.45;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+.app-header {
+  padding: 24px 16px 12px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.app-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+
+/* The wire format leads with a Persian marker character ("و"/"ک") followed by pipe-
+   delimited digits. Left unmanaged, the browser's bidi algorithm treats each line as an
+   RTL run and visually reorders the fields around it — the payload is structured data,
+   not prose, so force strict logical (left-to-right) rendering order regardless of which
+   characters appear in it. Applies to both the paste box and any displayed raw payload. */
+textarea,
+.raw,
+.parse-error {
+  direction: ltr;
+  unicode-bidi: bidi-override;
+}
+
+textarea {
+  width: 100%;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95rem;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+button {
+  font: inherit;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--border);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+.status {
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.session-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.session-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.session-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-family: ui-monospace, monospace;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--fg);
+}
+
+.best-estimate {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--best);
+  border: 1px solid var(--best-border);
+}
+
+.best-estimate .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.sample-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sample {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.sample.is-best {
+  border-color: var(--best-border);
+}
+
+.sample .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.sample .outlier-note {
+  color: var(--danger);
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.sample .raw {
+  margin-top: 6px;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.sample a {
+  color: var(--accent);
+}
+
+.parse-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.app-footer {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
