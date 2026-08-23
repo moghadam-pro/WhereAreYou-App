@@ -58,17 +58,31 @@ data class SafetySession(
     val cancellationReason: String? = null,
     val completionReason: SessionCompletionReason? = null,
 ) {
+    /** True while still progressing through the normal collect/send lifecycle. */
     val isActive: Boolean
-        get() = state !in TERMINAL_STATES
+        get() = state in ACTIVE_STATES
 
+    /** True once finished — no further reduction should be applied. */
     val isTerminal: Boolean
         get() = state in TERMINAL_STATES
 
     companion object {
+        val ACTIVE_STATES = setOf(
+            SafetySessionState.CREATED,
+            SafetySessionState.COLLECTING_INITIAL,
+            SafetySessionState.FIRST_RESPONSE_SENT,
+            SafetySessionState.WAITING_FOR_FOLLOWUP,
+            SafetySessionState.COLLECTING_FOLLOWUP,
+        )
+
         val TERMINAL_STATES = setOf(
             SafetySessionState.COMPLETED,
             SafetySessionState.CANCELLED,
             SafetySessionState.FAILED,
         )
+
+        // COOLDOWN is neither: it represents an audit record for a trigger that was
+        // suppressed because the contact/session scope was already in cooldown
+        // (see SafetySessionMachine.createSuppressedByCooldown) — it never progresses.
     }
 }
