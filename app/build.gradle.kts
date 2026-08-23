@@ -1,5 +1,10 @@
 plugins {
-    id("com.android.application") version "8.5.2"
+    // AGP 8.5.x removed com.android.build.gradle.api.BaseVariant, which Kotlin Gradle
+    // Plugin 2.0.21's android plugin still reflects on at configuration time — pairing
+    // them fails with NoClassDefFoundError: com/android/build/gradle/api/BaseVariant
+    // (hit for real on GitHub Actions CI; see docs/DEVIATIONS.md). 8.4.2 is the last patch
+    // in Kotlin 2.0.21's documented supported AGP range that keeps that class.
+    id("com.android.application") version "8.4.2"
     kotlin("android") version "2.0.21"
     id("com.google.devtools.ksp") version "2.0.21-1.0.28"
 }
@@ -17,12 +22,12 @@ plugins {
 
 android {
     namespace = "com.whereareyou.app"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.whereareyou.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
     }

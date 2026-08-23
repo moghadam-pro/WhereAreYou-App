@@ -19,15 +19,26 @@ Consequences:
   and its full test suite runs in this sandbox. All 120 domain-layer tests referenced in
   other commits were actually executed here, not just written.
 - `:app` (the Android module) could **not** be compiled, run, or tested in this sandbox.
-  Every file in it was written and hand-reviewed against current AGP 8.5 / Compose BOM
-  2024.09.03 / Room 2.6.1 / Navigation-Compose 2.8.1 APIs, but it has not been proven to
-  build. **Before relying on it, build `:app` in a normal Android Studio environment (or any
-  CI runner with SDK + Google Maven access) and fix whatever the compiler finds.**
+  Every file in it was written and hand-reviewed against current AGP / Compose BOM
+  2024.09.03 / Room 2.6.1 / Navigation-Compose 2.8.1 APIs, but review is not a build. A real
+  build (see below) was needed to find the first bug this created.
 - The Gradle setup works around this only for local development ergonomics: root
   `gradle.properties` sets `org.gradle.configureondemand=true` so that `:core:test` never
   needs to configure `:app` (and therefore never needs to resolve AGP) — this is not a
   permanent design decision, just what let this phase's `:core` work be built and tested
   without the Android SDK.
+- A `.github/workflows/build-debug-apk.yml` CI workflow now does what this sandbox cannot:
+  on a GitHub-hosted runner (full internet, preinstalled Android SDK) it runs
+  `:core:test` then `:app:assembleDebug` and uploads the resulting debug APK. Its **first**
+  run caught a real bug review alone had missed: `com.android.application` 8.5.2 paired
+  with `kotlin("android")` 2.0.21 failed with
+  `NoClassDefFoundError: com/android/build/gradle/api/BaseVariant` — AGP 8.5.x had already
+  dropped a class the Kotlin Gradle Plugin's Android target still reflects on at
+  configuration time. Fixed by pinning AGP to 8.4.2 (the last patch in Kotlin 2.0.21's
+  documented supported range that still ships that class) and `compileSdk`/`targetSdk` to
+  34 to match. This is exactly why this document says "review is not a build" above — treat
+  `:app` as verified only as of the last **green** run of that workflow, not as of the last
+  time someone read the code.
 
 This is unrelated to the actual Google Play SMS/Call-Log policy restriction discussed in
 `SECURITY_PRIVACY.md` section 17 and `PRODUCT_SPEC.md` section 18 — that one is a real
