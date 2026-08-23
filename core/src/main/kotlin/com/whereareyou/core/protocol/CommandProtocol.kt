@@ -7,7 +7,7 @@ enum class CommandCode(val wireValue: Int) {
     ;
 
     companion object {
-        fun fromWireValue(value: Int): CommandCode? = entries.firstOrNull { it.wireValue == value }
+        fun fromWireValue(value: Int): CommandCode? = values().firstOrNull { it.wireValue == value }
     }
 }
 

@@ -154,7 +154,7 @@ private fun EmergencyCallbackDropdown(
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable),
             )
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                EmergencyCallbackMode.entries.forEach { mode ->
+                EmergencyCallbackMode.values().forEach { mode ->
                     DropdownMenuItem(
                         text = { Text(mode.label()) },
                         onClick = {
