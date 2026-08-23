@@ -35,7 +35,11 @@ buildscript {
 // cause. Before guessing another version, inspect the actual resolved buildscript
 // classpath jars directly to settle whether BaseVariant.class physically exists in the
 // AGP jar Gradle resolved here at all.
-buildscript.configurations.getByName("classpath").files.forEach { f ->
+buildscript.configurations.getByName("classpath").files.filter { f ->
+    f.name.startsWith("gradle-8") || f.name.startsWith("gradle-api-8") ||
+        f.name.startsWith("kotlin-gradle-plugin-2") || f.name == "builder-model-8.7.3.jar" ||
+        f.name.startsWith("builder-8")
+}.forEach { f ->
     val hasBaseVariant = try {
         java.util.zip.ZipFile(f).use { zip ->
             zip.getEntry("com/android/build/gradle/api/BaseVariant.class") != null
