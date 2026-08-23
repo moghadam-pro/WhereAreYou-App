@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WhereAreYou Decoder</title>
+  <meta name="description" content="Offline SMS status decoder for WhereAreYou. Nothing is sent anywhere." />
+  <meta name="theme-color" content="#1b4332" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <!-- No apple-touch-icon PNG yet (TODO before real distribution, see tools/decoder/README.md);
+       iOS "Add to Home Screen" falls back to a page screenshot until one is added. -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>WhereAreYou Decoder</h1>
+    <p class="subtitle">Paste a status text. Everything happens on this device — nothing is sent anywhere.</p>
+  </header>
+
+  <main>
+    <section class="panel" aria-labelledby="input-heading">
+      <h2 id="input-heading">Paste message(s)</h2>
+      <p class="hint">One message per line. You can paste several samples from the same safety session at once.</p>
+      <textarea
+        id="payload-input"
+        rows="5"
+        dir="ltr"
+        placeholder="و1|3174|1|3629714|5912345|18|9|0|1|29784562"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+      ></textarea>
+      <div class="actions">
+        <button id="decode-button" type="button">Decode</button>
+        <button id="clear-button" type="button" class="secondary">Clear</button>
+      </div>
+      <p id="input-status" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="results" class="results" aria-live="polite"></section>
+
+    <section class="panel install-panel" id="install-panel" hidden>
+      <h2>Install for offline use</h2>
+      <p class="hint">Installing keeps this decoder working with no connection at all, and adds it to your home screen.</p>
+      <button id="install-button" type="button">Install</button>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>
+      No account, no server, no analytics. Source: see the WhereAreYou repository,
+      <code>tools/decoder/</code>.
+    </p>
+  </footer>
+
+  <template id="session-card-template">
+    <article class="session-card">
+      <header class="session-card-header">
+        <h3></h3>
+        <span class="badge movement-badge" hidden>Movement detected</span>
+      </header>
+      <div class="best-estimate"></div>
+      <ul class="sample-list"></ul>
+    </article>
+  </template>
+
+  <template id="parse-error-template">
+    <li class="parse-error"></li>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
