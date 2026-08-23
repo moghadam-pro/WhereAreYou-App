@@ -12,6 +12,7 @@ on:
   workflow_dispatch: {}
   push:
     branches:
+      - main
       - "claude/**"
     paths:
       - "app/**"
@@ -72,29 +73,67 @@ jobs:
           fi
           exit "$BUILD_EXIT"
 
+      - name: Name the APK after the product and version
+        id: apk
+        run: |
+          set -e
+          # Portable extraction: grep -oP needs a PCRE-enabled grep and a UTF-8
+          # locale, neither of which is guaranteed outside this runner image.
+          VERSION_NAME="$(sed -n 's/.*versionName *= *"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
+          test -n "$VERSION_NAME"
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/WhereAreYou-${VERSION_NAME}-beta-build${{ github.run_number }}.apk"
+          echo "version=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          ls -l dist
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: whereareyou-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: dist/*.apk
           if-no-files-found: error
           retention-days: 30
 
+      # Only main publishes a release. Feature branches still run the whole build above,
+      # so they get the same regression cover without creating throwaway release tags.
       - name: Publish GitHub Release with the APK
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: debug-build-${{ github.run_number }}
-          name: "Debug build #${{ github.run_number }} (Phase 1A/1B, unsigned/debug-signed)"
+          tag_name: v${{ steps.apk.outputs.version }}-beta.${{ github.run_number }}
+          name: "WhereAreYou ${{ steps.apk.outputs.version }} beta (build ${{ github.run_number }})"
           body: |
-            Automated debug APK build from branch `${{ github.ref_name }}` at commit ${{ github.sha }}.
+            Beta build of **Phase 1A/1B**, built by CI from `${{ github.ref_name }}` at
+            commit ${{ github.sha }}. Free and open source under Apache-2.0.
 
-            This is a **debug build of the first Phase 1A/1B milestone** — Protect-mode
-            scaffold, trusted-contact CRUD, and the domain layer. There is no real
-            SMS/call/location integration yet (see docs/ROADMAP.md and docs/DEVIATIONS.md),
-            so the app requests no dangerous permissions and cannot yet respond to a
-            missed call, an SMS command, or a low-battery event.
+            ### What works
 
-            Application ID is `com.whereareyou.app.debug`, so it installs alongside any
-            future release build. Expect bugs and missing features.
+            - Protect home screen, add / edit / remove trusted contacts
+            - Per-contact capability toggles and the Emergency Callback mode selector
+              (defaults to Off, as the spec requires)
+            - Permission & readiness screen
+            - Local persistence (Room + DataStore)
+            - The full domain layer in `:core`: missed-call trigger rules, SMS command
+              authentication with replay protection and rate limiting, the compact SMS
+              protocol codec, and the safety-session state machine — 120 unit tests
+
+            ### What does not work yet
+
+            The domain layer is **not wired to real platform events**. This build cannot
+            respond to a missed call, an SMS command, or a low-battery event, and does not
+            read your location or send any SMS. It requests **no dangerous permissions at
+            all** — that is deliberate, not an oversight, and is why the readiness screen
+            shows everything as "not yet required". Real receivers and transport are
+            Phase 1C onward; see `docs/ROADMAP.md`.
+
+            ### Installing
+
+            Debug-signed APK, application ID `com.whereareyou.app.debug`, minSdk 26
+            (Android 8.0+). Android will warn about installing from an unknown source. It
+            installs beside any future release build, but cannot be upgraded in place to
+            a production-signed one.
+
+            Compiled and packaged by CI; treat on-device behaviour as untested. Bug
+            reports welcome.
           prerelease: true
-          files: app/build/outputs/apk/debug/*.apk
+          files: dist/*.apk
