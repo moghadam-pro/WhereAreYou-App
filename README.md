@@ -106,8 +106,10 @@ SMS and Call Log permissions are highly restricted on Google Play. Early builds 
   CRUD with per-contact capability toggles, Room + DataStore persistence, a permission
   readiness screen skeleton. No dangerous permissions requested yet and no platform event
   adapters (BroadcastReceivers) wired — that is Phase 1C onward, intentionally out of scope
-  here. This module could not be build-verified in the environment that wrote it; see
-  `docs/DEVIATIONS.md`.
+  here. Builds to an installable debug APK (`com.whereareyou.app.debug`, minSdk 26,
+  targetSdk 35) via `./gradlew :app:assembleDebug`; the toolchain it needs and the
+  classloader bug that blocked it for a long time are written up in `docs/DEVIATIONS.md`
+  section 1. It has been compiled and packaged, but not yet run on a physical device.
 - `tools/decoder/` — offline static decoder/PWA, dependency-free, with its own test suite
   sharing vectors with `:core`'s protocol tests.
 

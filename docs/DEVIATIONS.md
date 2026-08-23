@@ -4,55 +4,81 @@ AGENTS.md asks that any Android platform restriction forcing a deviation from th
 documented alongside the implementation. This tracks all of them so far, plus a couple of
 sandbox-specific limitations that shaped how the code was written and verified.
 
-## 1. This build environment cannot compile `:app`
+## 1. `:app` build verification history (resolved)
+
+**Status: resolved.** `:app` now compiles and packages an installable debug APK
+(`app/build/outputs/apk/debug/app-debug.apk`, `com.whereareyou.app.debug`, minSdk 26,
+targetSdk/compileSdk 35) on a normal developer machine with Android Studio's SDK.
+`:core:test` (120 tests) passes in the same build. This section is kept as history,
+because it explains why several build files look the way they do.
+
+### What the original sandbox could not do
 
 The Android Gradle Plugin and the Android SDK components it needs are published only to
-Google's Maven repository (`dl.google.com`). The sandbox this code was written in blocks
-outbound access to that host at the network-policy level (`403` on `CONNECT`, confirmed via
-the local egress proxy's status endpoint) — this is an infrastructure/environment
-restriction, not an Android platform restriction, but it materially affected how this phase
-was implemented and verified, so it belongs here.
+Google's Maven repository (`dl.google.com`). The sandbox this code was first written in
+blocked outbound access to that host at the network-policy level (`403` on `CONNECT`) — an
+infrastructure restriction, not an Android platform restriction, but it shaped how this
+phase was written and verified, so it belongs here.
 
-Consequences:
+Consequently `:core` (plain Kotlin/JVM, Maven Central only) was built and tested there,
+while every file in `:app` was only hand-reviewed against the AGP / Compose / Room APIs of
+the day. Review is not a build: the first real compile found an invalid
+`import androidx.compose.foundation.layout.weight` in `HomeScreen.kt` (`weight` is a
+`RowScope`/`ColumnScope` member, not a top-level function), and showed that several call
+sites — `enableEdgeToEdge()`, `Icons.AutoMirrored.Filled.ArrowBack`, `MenuAnchorType` —
+required newer AndroidX artifacts than the dependency block actually declared.
 
-- `:core` (plain Kotlin/JVM, Maven Central only — no Google-hosted dependency at all) builds
-  and its full test suite runs in this sandbox. All 120 domain-layer tests referenced in
-  other commits were actually executed here, not just written.
-- `:app` (the Android module) could **not** be compiled, run, or tested in this sandbox.
-  Every file in it was written and hand-reviewed against current AGP / Compose BOM
-  2024.09.03 / Room 2.6.1 / Navigation-Compose 2.8.1 APIs, but review is not a build. A real
-  build (see below) was needed to find the first bug this created.
-- The Gradle setup works around this only for local development ergonomics: root
-  `gradle.properties` sets `org.gradle.configureondemand=true` so that `:core:test` never
-  needs to configure `:app` (and therefore never needs to resolve AGP) — this is not a
-  permanent design decision, just what let this phase's `:core` work be built and tested
-  without the Android SDK.
-- A `.github/workflows/build-debug-apk.yml` CI workflow now does what this sandbox cannot:
-  on a GitHub-hosted runner (full internet, preinstalled Android SDK) it runs
-  `:core:test` then `:app:assembleDebug` and uploads the resulting debug APK. Its first
-  three runs all failed identically with
-  `NoClassDefFoundError: com/android/build/gradle/api/BaseVariant` while applying
-  `kotlin("android")` on top of `com.android.application` — and stayed identical across two
-  different fix attempts that turned out to be wrong: neither downgrading AGP (8.5.2 ->
-  8.4.2) nor downgrading the Gradle wrapper (8.14.3 -> 8.6, the floor AGP 8.4.x itself
-  requires) changed the failure at all. That ruled out both as the cause and pointed at the
-  one thing common to every attempt: Kotlin Gradle Plugin **2.0.21** itself. Its
-  post-K2-rewrite Android target still reflects on the old `BaseVariant`-based API at
-  configuration time and appears to hit a real regression doing so, independent of which
-  AGP/Gradle version it's paired with. Fixed by pinning `:app` to Kotlin **1.9.24** (with a
-  matching KSP `1.9.24-1.0.20` and Compose compiler extension `1.5.14`) — the pre-rewrite
-  Kotlin Android plugin uses the same `BaseVariant`-based API directly and doesn't hit this.
-  `:core` stays on Kotlin 2.0.21 (pure `kotlin("jvm")`, no AGP interaction, unaffected); the
-  two modules deliberately run different Kotlin Gradle Plugin versions as a result.
-  This is exactly why this document says "review is not a build" above — treat `:app` as
-  verified only as of the last **green** run of that workflow, not as of the last time
-  someone read the code or guessed a version number, and don't trust the first plausible-
-  looking cause: two of the three hypotheses tried here were wrong despite each looking
-  like a reasonable, well-justified fix at the time.
+### The `BaseVariant` CI failure, and what it really was
 
-This is unrelated to the actual Google Play SMS/Call-Log policy restriction discussed in
+A `.github/workflows/build-debug-apk.yml` workflow was added to do the build the sandbox
+could not. Its first ~23 runs all failed with
+`NoClassDefFoundError: com/android/build/gradle/api/BaseVariant` while applying
+`kotlin("android")` on top of `com.android.application`, unchanged across many attempted
+AGP/Gradle/Kotlin version combinations and several different ways of applying the plugin.
+
+The cause was classloader scoping, not versions: Kotlin's `KotlinAndroidTarget` is
+instantiated from the shared root-project plugin scope, while AGP had only ever been
+declared inside `:app`'s own local `buildscript` scope. Gradle's scopes are
+child-sees-parent and never the reverse, so the shared scope structurally could not see
+AGP. Declaring every plugin at the root with `apply false` — the ordinary multi-module
+pattern — puts them in one scope and fixes it. None of the version changes that were tried
+could ever have mattered.
+
+### Current toolchain
+
+| Component | Version | Why |
+| --- | --- | --- |
+| Gradle | 8.13 | AGP 8.9 floor is 8.11.1 |
+| AGP | 8.9.1 | supports `compileSdk 35`, needs JDK 17+ |
+| Kotlin | 2.0.21 (both modules) | with `org.jetbrains.kotlin.plugin.compose`; K2 Compose compiler is no longer a separate `kotlinCompilerExtensionVersion` |
+| KSP | 2.0.21-1.0.28 | must track the Kotlin version exactly |
+| compileSdk / targetSdk / minSdk | 35 / 35 / 26 | 35 is what AGP 8.9 fully supports |
+| JVM target | 17 | both modules |
+
+Two build-config choices are deliberate and worth not "tidying away":
+
+- Neither module uses `jvmToolchain(...)`. A toolchain makes Gradle demand a JDK of that
+  exact version and fail if the machine only has a newer LTS installed; any JDK ≥ 17 can
+  emit 17 bytecode, so the target is set on the compiler instead. An earlier
+  `jvmToolchain(21)` in `:core` also broke `:app`, which cannot inline JVM-21 bytecode
+  into a JVM-17 target.
+- `org.gradle.configureondemand` was removed from `gradle.properties`. It existed only so
+  that `:core:test` would not configure `:app` (and so would not need AGP) in the
+  offline sandbox; AGP warns that it does not support the flag, and it is unnecessary now.
+
+### Reproducing the build
+
+The build needs a JDK 17/18/21 — Android Studio's own bundled JBR is currently JDK 25,
+which Gradle 8.13 will not run on, so set the Gradle JDK explicitly (Settings → Build,
+Execution, Deployment → Build Tools → Gradle → Gradle JDK) rather than relying on the
+default. On a network where `dl.google.com` is filtered, Gradle also needs proxy details
+as JVM system properties in `~/.gradle/gradle.properties`
+(`systemProp.https.proxyHost` / `systemProp.https.proxyPort`); the JVM ignores the
+`HTTP_PROXY`/`HTTPS_PROXY` environment variables that the rest of the shell honours.
+
+This is all unrelated to the Google Play SMS/Call-Log policy restriction discussed in
 `SECURITY_PRIVACY.md` section 17 and `PRODUCT_SPEC.md` section 18 — that one is a real
-product/distribution constraint independent of any particular build machine.
+product/distribution constraint independent of any build machine.
 
 ## 2. `PhoneNumberNormalizer` is hand-rolled, not a real phone-number library
 
