@@ -1,5 +1,7 @@
 package com.whereareyou.core.model.phone
 
+import com.whereareyou.core.model.text.DigitNormalization
+
 /** Result of attempting to normalize a raw, user-entered phone number. */
 sealed interface NormalizedPhoneNumber {
     /**
@@ -83,7 +85,7 @@ object PhoneNumberNormalizer {
         digits.length in 8..15 && digits.all(Char::isDigit)
 
     private fun stripFormatting(raw: String): String {
-        val normalizedDigits = raw.map { toAsciiDigitOrSelf(it) }.joinToString("")
+        val normalizedDigits = DigitNormalization.toAsciiDigits(raw)
         val builder = StringBuilder()
         for ((index, ch) in normalizedDigits.withIndex()) {
             when {
@@ -94,12 +96,5 @@ object PhoneNumberNormalizer {
             }
         }
         return builder.toString()
-    }
-
-    /** Converts Persian/Arabic-Indic digits to ASCII so mixed-script input still normalizes. */
-    private fun toAsciiDigitOrSelf(ch: Char): Char = when (ch) {
-        in '۰'..'۹' -> '0' + (ch - '۰') // Persian digits
-        in '٠'..'٩' -> '0' + (ch - '٠') // Arabic-Indic digits
-        else -> ch
     }
 }
