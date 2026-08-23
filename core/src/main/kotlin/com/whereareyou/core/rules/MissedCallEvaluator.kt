@@ -25,7 +25,7 @@ sealed interface MissedCallEvaluation {
     /** Calls counted towards this evaluation, oldest first. */
     data class Triggered(val count: Int, val evidence: List<Instant>) : MissedCallEvaluation
     data class NotTriggered(val count: Int) : MissedCallEvaluation
-    data object InCooldown : MissedCallEvaluation
+    object InCooldown : MissedCallEvaluation
 }
 
 /**
