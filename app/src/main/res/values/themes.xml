@@ -1,0 +1,4 @@
+<resources>
+    <!-- Plain launch theme; Compose (WhereAreYouTheme, ui/theme) owns all real styling. -->
+    <style name="Theme.WhereAreYou" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

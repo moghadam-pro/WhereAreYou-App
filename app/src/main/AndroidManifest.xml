@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase 1A/1B manifest: deliberately requests zero dangerous permissions.
+
+  This build only has the Protect UI, trusted-contact CRUD and the (currently
+  unwired) domain layer from :core. Real SMS/call-log/telecom/background-location
+  platform integration is Phase 1C onward (see /docs/ROADMAP.md and AGENTS.md
+  "First coding milestone") and each permission below must be added only when the
+  feature that needs it is actually implemented (AGENTS.md "Permission strategy":
+  "Do not request broad permissions that are not required for an enabled feature").
+
+  No INTERNET permission: this is intentional, not an oversight (AGENTS.md core
+  invariant #8 — "no Phase 1 data may be sent over the internet").
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:name=".platform.WhereAreYouApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.WhereAreYou"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.WhereAreYou">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
