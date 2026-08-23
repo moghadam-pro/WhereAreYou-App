@@ -88,6 +88,7 @@ Phase 2 should define a transport adapter interface so users can optionally choo
 - [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) — functional, reliability and device test matrix
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — phased implementation plan
 - [`docs/DISCOVERY_NOTES.md`](docs/DISCOVERY_NOTES.md) — design rationale and conversation-derived decisions
+- [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md) — Android/build-environment restrictions that forced a deviation from the spec, and why
 
 ## Distribution note
 
@@ -95,6 +96,21 @@ SMS and Call Log permissions are highly restricted on Google Play. Early builds 
 
 ## Status
 
-**Discovery/specification complete enough to begin Phase 1 implementation.**
+**Phase 1A/1B implemented.**
+
+- `:core` — pure Kotlin/JVM domain layer: trusted-contact + capability model, missed-call
+  trigger rules (per-contact and aggregate), the `TriggerEngine`, SMS command
+  authentication/replay/rate-limiting, the status + command SMS protocol codec, and the
+  `SafetySession` state machine. 120 unit tests, all passing.
+- `:app` — Android/Kotlin/Jetpack Compose scaffold: Protect home screen, trusted-contact
+  CRUD with per-contact capability toggles, Room + DataStore persistence, a permission
+  readiness screen skeleton. No dangerous permissions requested yet and no platform event
+  adapters (BroadcastReceivers) wired — that is Phase 1C onward, intentionally out of scope
+  here. This module could not be build-verified in the environment that wrote it; see
+  `docs/DEVIATIONS.md`.
+- `tools/decoder/` — offline static decoder/PWA, dependency-free, with its own test suite
+  sharing vectors with `:core`'s protocol tests.
 
 Start by reading `AGENTS.md` and the documents under `docs/` before writing production code.
+Phase 1C+ (real SMS/call-log/telecom/background-location integration) should build on this
+domain layer rather than around it.
