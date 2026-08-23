@@ -1,12 +1,15 @@
 plugins {
-    // AGP 8.5.x removed com.android.build.gradle.api.BaseVariant, which Kotlin Gradle
-    // Plugin 2.0.21's android plugin still reflects on at configuration time — pairing
-    // them fails with NoClassDefFoundError: com/android/build/gradle/api/BaseVariant
-    // (hit for real on GitHub Actions CI; see docs/DEVIATIONS.md). 8.4.2 is the last patch
-    // in Kotlin 2.0.21's documented supported AGP range that keeps that class.
+    // kotlin("android") 2.0.21's Android target reflects on
+    // com.android.build.gradle.api.BaseVariant at configuration time and fails with
+    // NoClassDefFoundError on that class when paired with com.android.application, no
+    // matter which AGP 8.4/8.5 point release or Gradle 8.6-8.14 was tried (all reproduced
+    // for real on CI; see docs/DEVIATIONS.md) — a K2/new-target-rewrite regression in
+    // Kotlin 2.0.x's Android plugin, not an AGP version issue. Kotlin 1.9.24's
+    // (pre-rewrite) android plugin uses the same BaseVariant-based API directly and does
+    // not hit it, so :app pins Kotlin/KSP independently of :core's 2.0.21.
     id("com.android.application") version "8.4.2"
-    kotlin("android") version "2.0.21"
-    id("com.google.devtools.ksp") version "2.0.21-1.0.28"
+    kotlin("android") version "1.9.24"
+    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
 }
 
 // NOTE ON BUILD VERIFICATION (see /docs/DEVIATIONS.md):
@@ -46,7 +49,8 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
+        // Must match Kotlin 1.9.24 per Google's Compose-Kotlin compatibility map.
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     packaging {

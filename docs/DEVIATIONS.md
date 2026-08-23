@@ -29,22 +29,26 @@ Consequences:
   without the Android SDK.
 - A `.github/workflows/build-debug-apk.yml` CI workflow now does what this sandbox cannot:
   on a GitHub-hosted runner (full internet, preinstalled Android SDK) it runs
-  `:core:test` then `:app:assembleDebug` and uploads the resulting debug APK. Its first two
-  runs caught a real bug review alone had missed:
+  `:core:test` then `:app:assembleDebug` and uploads the resulting debug APK. Its first
+  three runs all failed identically with
   `NoClassDefFoundError: com/android/build/gradle/api/BaseVariant` while applying
-  `kotlin("android")` on top of `com.android.application`. The first fix attempt (pin AGP
-  8.5.2 -> 8.4.2) did **not** resolve it — the identical failure reproduced against 8.4.2
-  too, which ruled out "wrong AGP version" as the cause. The actual mismatch was the
-  **Gradle version**: the wrapper had been regenerated at Gradle 8.14.3 (this sandbox's
-  system Gradle, used only to bootstrap the wrapper — see the git history of
-  `gradle/wrapper/gradle-wrapper.properties`), which is newer than Kotlin Gradle Plugin
-  2.0.21's supported range. Fixed by pinning the wrapper back to Gradle 8.6 — the floor AGP
-  8.4.x itself requires, and inside Kotlin 2.0.21's supported ceiling — so all three
-  (Gradle/AGP/Kotlin) now sit in mutually compatible ranges instead of just two. This is
-  exactly why this document says "review is not a build" above — treat `:app` as verified
-  only as of the last **green** run of that workflow, not as of the last time someone read
-  the code, and re-read that run's actual failure before assuming which component is at
-  fault: the obvious culprit (AGP) was not the real one.
+  `kotlin("android")` on top of `com.android.application` — and stayed identical across two
+  different fix attempts that turned out to be wrong: neither downgrading AGP (8.5.2 ->
+  8.4.2) nor downgrading the Gradle wrapper (8.14.3 -> 8.6, the floor AGP 8.4.x itself
+  requires) changed the failure at all. That ruled out both as the cause and pointed at the
+  one thing common to every attempt: Kotlin Gradle Plugin **2.0.21** itself. Its
+  post-K2-rewrite Android target still reflects on the old `BaseVariant`-based API at
+  configuration time and appears to hit a real regression doing so, independent of which
+  AGP/Gradle version it's paired with. Fixed by pinning `:app` to Kotlin **1.9.24** (with a
+  matching KSP `1.9.24-1.0.20` and Compose compiler extension `1.5.14`) — the pre-rewrite
+  Kotlin Android plugin uses the same `BaseVariant`-based API directly and doesn't hit this.
+  `:core` stays on Kotlin 2.0.21 (pure `kotlin("jvm")`, no AGP interaction, unaffected); the
+  two modules deliberately run different Kotlin Gradle Plugin versions as a result.
+  This is exactly why this document says "review is not a build" above — treat `:app` as
+  verified only as of the last **green** run of that workflow, not as of the last time
+  someone read the code or guessed a version number, and don't trust the first plausible-
+  looking cause: two of the three hypotheses tried here were wrong despite each looking
+  like a reasonable, well-justified fix at the time.
 
 This is unrelated to the actual Google Play SMS/Call-Log policy restriction discussed in
 `SECURITY_PRIVACY.md` section 17 and `PRODUCT_SPEC.md` section 18 — that one is a real
