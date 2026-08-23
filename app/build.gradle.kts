@@ -8,14 +8,12 @@ plugins {
     // (pre-rewrite) android plugin uses the same BaseVariant-based API directly and does
     // not hit it.
     //
-    // This version must match the root build.gradle.kts kotlin("jvm") version exactly:
-    // a single Gradle build shares one plugin classpath across all subprojects, so :core
-    // and :app resolving different Kotlin Gradle Plugin versions fails configuration with
-    // "the plugin is already on the classpath with an unknown version" (also hit for real
-    // on CI) — there is no way to give :app an older Kotlin than :core here without
-    // splitting them into separate Gradle builds, which isn't worth it for this.
+    // No version here: it's pinned once via the root build.gradle.kts apply-false
+    // declaration (kept in sync with :core's kotlin("jvm") version there) and must stay
+    // that way — repeating a version here alongside the root's apply-false entry produced
+    // "the plugin is already on the classpath with an unknown version" on real CI runs.
     id("com.android.application") version "8.4.2"
-    kotlin("android") version "1.9.24"
+    kotlin("android")
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
 }
 
