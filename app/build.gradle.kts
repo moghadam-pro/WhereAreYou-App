@@ -6,7 +6,14 @@ plugins {
     // for real on CI; see docs/DEVIATIONS.md) — a K2/new-target-rewrite regression in
     // Kotlin 2.0.x's Android plugin, not an AGP version issue. Kotlin 1.9.24's
     // (pre-rewrite) android plugin uses the same BaseVariant-based API directly and does
-    // not hit it, so :app pins Kotlin/KSP independently of :core's 2.0.21.
+    // not hit it.
+    //
+    // This version must match the root build.gradle.kts kotlin("jvm") version exactly:
+    // a single Gradle build shares one plugin classpath across all subprojects, so :core
+    // and :app resolving different Kotlin Gradle Plugin versions fails configuration with
+    // "the plugin is already on the classpath with an unknown version" (also hit for real
+    // on CI) — there is no way to give :app an older Kotlin than :core here without
+    // splitting them into separate Gradle builds, which isn't worth it for this.
     id("com.android.application") version "8.4.2"
     kotlin("android") version "1.9.24"
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
