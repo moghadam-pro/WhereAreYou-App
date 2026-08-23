@@ -1,22 +1,23 @@
 // NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced identically
-// across 14 straight CI runs under AGP 8.4.2/8.5.2/8.7.3, Gradle 8.14.3/8.6/8.7/8.9, Kotlin
-// 1.9.24/2.0.21/2.1.0, with/without KSP, and both plugin-application mechanisms (see
-// docs/DEVIATIONS.md and this branch's commit history). A diagnostic that directly
-// inspected the resolved buildscript classpath jars with java.util.zip.ZipFile proved
-// BaseVariant.class DOES physically exist in gradle-8.7.3.jar — this was never a
-// missing-class problem, it's a classloader-visibility one, and it survived a jump to
-// Kotlin 2.1.0 (a newer kotlin-gradle-plugin release, tested specifically to rule out a
-// Gradle-API-generation mismatch in the jar Kotlin resolves) with the byte-identical
-// failure. Every version knob within the Gradle 8.x line has now been exhausted without
-// changing the outcome, which points at something in Gradle 8.x's own plugin/buildscript
-// classloading behavior rather than any AGP/Kotlin version choice. This drops to a
-// Gradle 7.x + AGP 7.x + Kotlin 1.8.x triad that predates whatever changed — a combination
-// that was standard and extremely well-tested for years before Gradle 8's plugins{}-first
-// era, as a test of whether the whole approach works on this runner at all. Compose
-// BOM/AndroidX versions below are rolled back to match this era (AGP 7.4.2 requires
-// compileSdk <= 33). Still applied imperatively via buildscript{}/apply(plugin=) so AGP
-// resolution stays out of root build.gradle.kts's always-evaluated plugins{} block,
-// preserving local :core:test runnability without reaching dl.google.com.
+// across 15 straight CI runs spanning every AGP version 7.4.2-8.7.3, every Gradle version
+// 7.6.4-8.14.3, and every Kotlin version 1.8.22-2.1.0 (see docs/DEVIATIONS.md and this
+// branch's commit history) — including a diagnostic that proved BaseVariant.class
+// physically exists in the resolved AGP jar (never a missing-class problem) and a full
+// drop to a pre-Gradle-8 generation of tooling that changed nothing. Every failure has the
+// identical shape: Gradle's ClassInspector, generating a decorated proxy for Kotlin's
+// KotlinAndroidTarget via objects.newInstance(), can't resolve BaseVariant from whatever
+// classloader loaded KotlinAndroidTarget. Every attempt so far applied kotlin-android by
+// STRING PLUGIN ID — either plugins{ id(...) } or apply(plugin = "kotlin-android") — both
+// of which route through Gradle's PluginRegistry, which appears to hand the resolved
+// plugin its own isolated classloader scope regardless of version or of whether that ID
+// was declared via the plugins{} block or applied imperatively (both mechanisms were
+// tried and both failed identically). This tries a genuinely different code path never
+// exercised before: applying kotlin-android by its concrete Plugin class
+// (KotlinAndroidPlugin, visible directly in every failing run's stack trace) via
+// pluginManager.apply(Class), which does not go through PluginRegistry's ID-based lookup
+// at all — the class is resolved via normal Kotlin type reference in this script, so it
+// loads through this script's own (buildscript-classpath-merged, AGP-visible) classloader
+// instead of a plugin-specific isolated one.
 buildscript {
     repositories {
         google()
@@ -29,7 +30,7 @@ buildscript {
 }
 
 apply(plugin = "com.android.application")
-apply(plugin = "kotlin-android")
+project.pluginManager.apply(org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPlugin::class.java)
 
 plugins {
     id("com.google.devtools.ksp") version "1.8.22-1.0.11"
