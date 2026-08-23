@@ -28,6 +28,24 @@ buildscript {
     }
 }
 
+// DIAGNOSTIC (temporary): 12 straight CI runs hit the identical
+// NoClassDefFoundError: com/android/build/gradle/api/BaseVariant across every AGP
+// (8.4.2/8.5.2/8.7.3) x Gradle (8.6/8.7/8.9/8.14.3) x Kotlin (1.9.24/2.0.21) combination
+// and both plugin-application mechanisms tried — ruling out every version knob as the
+// cause. Before guessing another version, inspect the actual resolved buildscript
+// classpath jars directly to settle whether BaseVariant.class physically exists in the
+// AGP jar Gradle resolved here at all.
+buildscript.configurations.getByName("classpath").files.forEach { f ->
+    val hasBaseVariant = try {
+        java.util.zip.ZipFile(f).use { zip ->
+            zip.getEntry("com/android/build/gradle/api/BaseVariant.class") != null
+        }
+    } catch (e: Exception) {
+        "ERROR: ${e.message}"
+    }
+    println("DIAGNOSTIC classpath jar: ${f.name} -> BaseVariant.class present = $hasBaseVariant")
+}
+
 apply(plugin = "com.android.application")
 apply(plugin = "kotlin-android")
 apply(plugin = "org.jetbrains.kotlin.plugin.compose")
