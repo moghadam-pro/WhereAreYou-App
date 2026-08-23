@@ -7,7 +7,7 @@ plugins {
     // sandbox blocks that host (see docs/DEVIATIONS.md section 1), so :app applies AGP and
     // kotlin-android imperatively instead, directly in app/build.gradle.kts, keeping
     // :core:test runnable here without ever touching Google's Maven repo.
-    kotlin("jvm") version "2.0.21" apply false
+    kotlin("jvm") version "2.1.0" apply false
 }
 
 tasks.register("clean", Delete::class) {
