@@ -12,12 +12,16 @@
 // plugin its own isolated classloader scope regardless of version or of whether that ID
 // was declared via the plugins{} block or applied imperatively (both mechanisms were
 // tried and both failed identically). This tries a genuinely different code path never
-// exercised before: applying kotlin-android by its concrete Plugin class
-// (KotlinAndroidPlugin, visible directly in every failing run's stack trace) via
+// exercised before: applying kotlin-android by its concrete Plugin class via
 // pluginManager.apply(Class), which does not go through PluginRegistry's ID-based lookup
-// at all — the class is resolved via normal Kotlin type reference in this script, so it
+// at all — the class is resolved via a normal Kotlin type reference in this script, so it
 // loads through this script's own (buildscript-classpath-merged, AGP-visible) classloader
-// instead of a plugin-specific isolated one.
+// instead of a plugin-specific isolated one. KotlinAndroidPlugin itself (visible in every
+// failing stack trace) turned out to be `internal` visibility and unusable from this
+// script's own compilation unit ("Cannot access 'KotlinAndroidPlugin': it is internal");
+// KotlinAndroidPluginWrapper is the public entry-point class the "kotlin-android"/
+// "org.jetbrains.kotlin.android" plugin ID actually registers via its
+// META-INF/gradle-plugins descriptor.
 buildscript {
     repositories {
         google()
@@ -30,7 +34,7 @@ buildscript {
 }
 
 apply(plugin = "com.android.application")
-project.pluginManager.apply(org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPlugin::class.java)
+project.pluginManager.apply(org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPluginWrapper::class.java)
 
 plugins {
     id("com.google.devtools.ksp") version "1.8.22-1.0.11"
