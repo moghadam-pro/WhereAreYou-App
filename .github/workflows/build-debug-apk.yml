@@ -53,8 +53,24 @@ jobs:
       - name: Run :core unit tests
         run: ./gradlew :core:test --no-daemon --stacktrace
 
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Build debug APK (diagnostic: find the actual resolved AGP artifact)
+        run: |
+          set +e
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace --info > gradle-info.log 2>&1
+          BUILD_EXIT=$?
+          echo "=== gradle exit code: $BUILD_EXIT ==="
+          echo "=== global Gradle init scripts (if any) ==="
+          find / -path "*/.gradle/init.d*" -type f 2>/dev/null | while read -r f; do
+            echo "--- $f ---"
+            cat "$f"
+          done
+          echo "=== ~/.gradle/gradle.properties (if any) ==="
+          cat "$HOME/.gradle/gradle.properties" 2>/dev/null || echo "(none)"
+          echo "=== lines mentioning the AGP artifact, BaseVariant, or kotlin-gradle-plugin jars ==="
+          grep -inE "com\.android\.tools\.build:gradle|BaseVariant|kotlin-gradle-plugin-[0-9]|kotlin-gradle-plugin-api" gradle-info.log | tail -200
+          echo "=== last 100 lines of the full info log ==="
+          tail -100 gradle-info.log
+          exit "$BUILD_EXIT"
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
