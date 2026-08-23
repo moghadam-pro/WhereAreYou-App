@@ -1,20 +1,21 @@
 // NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced identically
-// across 10 straight CI runs under AGP 8.4.2/8.5.2, Gradle 8.14.3/8.6/8.7, Kotlin
-// 2.0.21/1.9.24, with/without KSP, AND both plugin-application mechanisms (plugins{} DSL
-// and this buildscript{}+apply(plugin=) form) — ruling out every version combination *and*
-// application mechanism as the cause (see docs/DEVIATIONS.md and this branch's commit
-// history). The actual cause: Gradle 8.6 added an unconditional bytecode-instrumentation
-// transform (ExternalDependencyInstrumentingArtifactTransform, visible in every failing
-// run's --info log) applied to every external plugin/buildscript dependency, and AGP
-// versions before 8.6 ship a BaseVariant classfile that doesn't survive that transform
-// intact for Gradle's reflection-based decorated-class generation (needed here because
-// Kotlin's KotlinAndroidTarget references BaseVariant in its public API). This pins AGP to
-// 8.7.3 (past the version this was fixed) and the wrapper to Gradle 8.9 (AGP 8.7's own
-// documented minimum). Still applied imperatively via buildscript{}/apply(plugin=) rather
-// than the plugins{} block — not because that mechanism itself was ever the problem (it
-// wasn't; see above), but because that's what keeps AGP resolution out of the root
-// project's always-evaluated plugins{} block, which is what lets :core:test still run in
-// the local sandbox without reaching dl.google.com (see root build.gradle.kts).
+// across 11 straight CI runs under AGP 8.4.2/8.5.2/8.7.3, Gradle 8.14.3/8.6/8.7/8.9,
+// Kotlin 1.9.24 paired with every one of those, with/without KSP, and both plugin-
+// application mechanisms — ruling out AGP version, Gradle version, and application
+// mechanism as the sole cause (see docs/DEVIATIONS.md and this branch's commit history).
+// kotlin-gradle-plugin 1.9.24's KotlinAndroidTarget references the old BaseVariant API
+// directly in its public surface, which is what triggers Gradle's reflection-based
+// decorated-class generation to need that class at all; 2.0.21's K2-based Android target
+// was never actually retested under a clean, current AGP/Gradle pairing (the original
+// "downgrade to 1.9.24" theory was itself based on a stale environment). This moves :app
+// to Kotlin 2.0.21 to match :core exactly (avoiding two different Kotlin Gradle Plugin
+// versions in one build entirely) plus AGP's own paired Compose Compiler Gradle plugin
+// (org.jetbrains.kotlin.plugin.compose), which Kotlin 2.0+ requires in place of the old
+// composeOptions.kotlinCompilerExtensionVersion mechanism. Still applied imperatively via
+// buildscript{}/apply(plugin=) — that was never the BaseVariant cause, but it's what keeps
+// AGP resolution out of the root project's always-evaluated plugins{} block, letting
+// :core:test keep running in the local sandbox without reaching dl.google.com (see root
+// build.gradle.kts).
 buildscript {
     repositories {
         google()
@@ -22,15 +23,17 @@ buildscript {
     }
     dependencies {
         classpath("com.android.tools.build:gradle:8.7.3")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+        classpath("org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.0.21")
     }
 }
 
 apply(plugin = "com.android.application")
 apply(plugin = "kotlin-android")
+apply(plugin = "org.jetbrains.kotlin.plugin.compose")
 
 plugins {
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    id("com.google.devtools.ksp") version "2.0.21-1.0.28"
 }
 
 // NOTE ON BUILD VERIFICATION (see /docs/DEVIATIONS.md):
@@ -63,10 +66,9 @@ configure<com.android.build.gradle.AppExtension> {
 
     buildFeatures.compose = true
 
-    composeOptions {
-        // Must match Kotlin 1.9.24 per Google's Compose-Kotlin compatibility map.
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
+    // No composeOptions.kotlinCompilerExtensionVersion: Kotlin 2.0+ uses the
+    // org.jetbrains.kotlin.plugin.compose Gradle plugin (applied above) instead, which
+    // picks the matching Compose compiler automatically from the Kotlin version.
 
     packagingOptions {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
