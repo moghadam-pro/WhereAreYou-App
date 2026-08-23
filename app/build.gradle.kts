@@ -1,83 +1,15 @@
-// NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced identically
-// across 15 straight CI runs spanning every AGP version 7.4.2-8.7.3, every Gradle version
-// 7.6.4-8.14.3, and every Kotlin version 1.8.22-2.1.0 (see docs/DEVIATIONS.md and this
-// branch's commit history) — including a diagnostic that proved BaseVariant.class
-// physically exists in the resolved AGP jar (never a missing-class problem) and a full
-// drop to a pre-Gradle-8 generation of tooling that changed nothing. Every failure has the
-// identical shape: Gradle's ClassInspector, generating a decorated proxy for Kotlin's
-// KotlinAndroidTarget via objects.newInstance(), can't resolve BaseVariant from whatever
-// classloader loaded KotlinAndroidTarget. Every attempt so far applied kotlin-android by
-// STRING PLUGIN ID — either plugins{ id(...) } or apply(plugin = "kotlin-android") — both
-// of which route through Gradle's PluginRegistry, which appears to hand the resolved
-// plugin its own isolated classloader scope regardless of version or of whether that ID
-// was declared via the plugins{} block or applied imperatively (both mechanisms were
-// tried and both failed identically). This tries a genuinely different code path never
-// exercised before: applying kotlin-android by its concrete Plugin class via
-// pluginManager.apply(Class), which does not go through PluginRegistry's ID-based lookup
-// at all — the class is resolved via a normal Kotlin type reference in this script, so it
-// loads through this script's own (buildscript-classpath-merged, AGP-visible) classloader
-// instead of a plugin-specific isolated one. KotlinAndroidPlugin itself (visible in every
-// failing stack trace) turned out to be `internal` visibility and unusable from this
-// script's own compilation unit ("Cannot access 'KotlinAndroidPlugin': it is internal");
-// KotlinAndroidPluginWrapper is the public entry-point class the "kotlin-android"/
-// "org.jetbrains.kotlin.android" plugin ID actually registers via its
-// META-INF/gradle-plugins descriptor.
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:7.4.2")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22")
-    }
-}
-
-apply(plugin = "com.android.application")
-
-// DIAGNOSTIC (temporary): 22 straight CI runs hit the identical NoClassDefFoundError:
-// BaseVariant regardless of AGP/Gradle/Kotlin version or plugin-application mechanism
-// (string ID via plugins{}, string ID via apply(), or direct class apply via
-// pluginManager.apply(Class) — all three funnel into the same internal
-// KotlinAndroidPlugin.apply() -> dynamicallyApplyWhenAndroidPluginIsApplied ->
-// objects.newInstance(KotlinAndroidTarget::class) call). Inspect the ACTUAL runtime
-// classloader that loaded KotlinAndroidTarget directly, rather than just checking file
-// presence on the classpath configuration (already proven present as a file, but that
-// doesn't prove it's reachable from the specific classloader Gradle uses here).
-run {
-    val katClass = org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget::class.java
-    val katLoader = katClass.classLoader
-    val myLoader = object {}.javaClass.classLoader
-    println("DIAGNOSTIC: KotlinAndroidTarget loaded by classloader = $katLoader")
-    println("DIAGNOSTIC: this script's own classloader              = $myLoader")
-    println("DIAGNOSTIC: same classloader instance? ${katLoader === myLoader}")
-    val loadable = try {
-        Class.forName("com.android.build.gradle.api.BaseVariant", false, katLoader)
-        true
-    } catch (e: Throwable) {
-        false
-    }
-    println("DIAGNOSTIC: BaseVariant loadable from KotlinAndroidTarget's own classloader = $loadable")
-    val loadableFromMine = try {
-        Class.forName("com.android.build.gradle.api.BaseVariant", false, myLoader)
-        true
-    } catch (e: Throwable) {
-        false
-    }
-    println("DIAGNOSTIC: BaseVariant loadable from this script's classloader = $loadableFromMine")
-    // Walk the classloader parent chain of both, looking for where they diverge.
-    var l: ClassLoader? = katLoader
-    var depth = 0
-    while (l != null && depth < 10) {
-        println("DIAGNOSTIC: KotlinAndroidTarget loader chain[$depth] = $l")
-        l = l.parent
-        depth++
-    }
-}
-
-project.pluginManager.apply(org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPluginWrapper::class.java)
-
+// See build.gradle.kts (root) for the full explanation: 23 straight CI failures with
+// NoClassDefFoundError: com/android/build/gradle/api/BaseVariant traced to Kotlin's
+// KotlinAndroidTarget being instantiated from a shared root-level classloader scope that
+// never had AGP in it, because every prior attempt declared AGP only inside :app's own
+// local scope (via plugins{} here directly, or via buildscript{}/apply(plugin=)/class-based
+// apply — the application mechanism was never the issue). Root now declares both AGP and
+// kotlin-android with apply false, so they resolve into the same shared scope Kotlin's
+// classes already live in; this block goes back to applying them normally, without
+// repeating a version.
 plugins {
+    id("com.android.application")
+    kotlin("android")
     id("com.google.devtools.ksp") version "1.8.22-1.0.11"
 }
 
@@ -127,33 +59,28 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
-// Uses add("implementation", ...) instead of the typed implementation(...) accessor.
-// Both plugins are back on the plugins{} DSL above so the typed accessors would resolve
-// too, but add(...) is part of the core DependencyHandler interface rather than a
-// generated accessor, so it's left as-is: one less thing to break if the plugin
-// application mechanism ever needs to change again.
 dependencies {
-    add("implementation", project(":core"))
+    implementation(project(":core"))
 
     val composeBom = platform("androidx.compose:compose-bom:2023.06.01")
-    add("implementation", composeBom)
+    implementation(composeBom)
 
-    add("implementation", "androidx.core:core-ktx:1.10.1")
-    add("implementation", "androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
-    add("implementation", "androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
-    add("implementation", "androidx.activity:activity-compose:1.7.2")
-    add("implementation", "androidx.navigation:navigation-compose:2.6.0")
+    implementation("androidx.core:core-ktx:1.10.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    implementation("androidx.activity:activity-compose:1.7.2")
+    implementation("androidx.navigation:navigation-compose:2.6.0")
 
-    add("implementation", "androidx.compose.ui:ui")
-    add("implementation", "androidx.compose.ui:ui-graphics")
-    add("implementation", "androidx.compose.ui:ui-tooling-preview")
-    add("implementation", "androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
 
-    add("implementation", "androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    add("implementation", "androidx.room:room-runtime:2.5.2")
-    add("implementation", "androidx.room:room-ktx:2.5.2")
-    add("ksp", "androidx.room:room-compiler:2.5.2")
+    implementation("androidx.room:room-runtime:2.5.2")
+    implementation("androidx.room:room-ktx:2.5.2")
+    ksp("androidx.room:room-compiler:2.5.2")
 
-    add("debugImplementation", "androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 }
