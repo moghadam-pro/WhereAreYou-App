@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     kotlin("jvm")
 }
@@ -6,12 +8,19 @@ plugins {
 // security primitives live here with zero Android framework dependency so
 // they can be unit tested on a plain JVM (see AGENTS.md "Architecture rules").
 
+// JVM target 17 — must match :app (Android's supported target), and is set as a plain
+// compiler/javac target rather than a `jvmToolchain(17)`: a toolchain forces Gradle to
+// locate a JDK of that exact version, which fails on any machine (or CI runner) whose
+// only installed JDK is a newer LTS. Any JDK >= 17 can *emit* 17 bytecode.
 kotlin {
-    // Must match :app's JVM target (17, see app/build.gradle.kts) and stay a value the
-    // Kotlin 1.8.22 compiler recognizes: it maps a resolved toolchain JavaVersion straight to
-    // its JvmTarget enum, which in 1.8.22 tops out below 21 — CI resolves a real JDK 21 (also
-    // installed) when this said 21, and compileKotlin died with "Unknown Kotlin JVM target: 21".
-    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 dependencies {

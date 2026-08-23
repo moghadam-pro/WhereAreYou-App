@@ -2,10 +2,11 @@ name: Build debug APK
 
 # Manual/on-demand build of the Phase 1A/1B Protect app as an installable debug APK.
 #
-# This exists because the sandbox that originally wrote this app (see docs/DEVIATIONS.md
-# section 1) cannot reach dl.google.com, so :app could only be hand-reviewed there, never
-# compiled. GitHub-hosted runners have full internet access and ship with an Android SDK
-# preinstalled, so this workflow does the actual build/verification that sandbox couldn't.
+# This started as the only place :app could be compiled at all — the sandbox that
+# originally wrote it (docs/DEVIATIONS.md section 1) could not reach dl.google.com. :app
+# now builds on a normal developer machine too, so this workflow's job is regression
+# cover: it must keep matching the local toolchain (AGP 8.9.1 / Gradle 8.13 / JDK 17+ /
+# compileSdk 35), or a green run here stops meaning anything.
 
 on:
   workflow_dispatch: {}
@@ -46,7 +47,10 @@ jobs:
           set -e
           SDKMANAGER="$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")"
           yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-33" "platforms;android-34" "build-tools;33.0.2" "build-tools;34.0.0" "build-tools;35.0.0"
+          # Must cover app/build.gradle.kts's compileSdk (35) and AGP 8.9's default
+          # build-tools (35.0.0). AGP can auto-download these, but installing them up
+          # front keeps the failure mode obvious if the SDK image ever changes.
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Run :core unit tests
         run: ./gradlew :core:test --no-daemon --stacktrace
@@ -86,7 +90,11 @@ jobs:
 
             This is a **debug build of the first Phase 1A/1B milestone** — Protect-mode
             scaffold, trusted-contact CRUD, and the domain layer. There is no real
-            SMS/call/location integration yet (see docs/ROADMAP.md and docs/DEVIATIONS.md).
-            Expect bugs and missing features; more fixes are coming.
+            SMS/call/location integration yet (see docs/ROADMAP.md and docs/DEVIATIONS.md),
+            so the app requests no dangerous permissions and cannot yet respond to a
+            missed call, an SMS command, or a low-battery event.
+
+            Application ID is `com.whereareyou.app.debug`, so it installs alongside any
+            future release build. Expect bugs and missing features.
           prerelease: true
           files: app/build/outputs/apk/debug/*.apk
