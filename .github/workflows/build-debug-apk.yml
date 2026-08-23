@@ -22,7 +22,7 @@ on:
       - ".github/workflows/build-debug-apk.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -56,7 +56,7 @@ jobs:
       - name: Build debug APK (diagnostic - find the actual resolved AGP artifact)
         run: |
           set +e
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace --info > gradle-info.log 2>&1
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace > gradle-info.log 2>&1
           BUILD_EXIT=$?
           echo "=== gradle exit code: $BUILD_EXIT ==="
           echo "=== global Gradle init scripts (if any) ==="
@@ -66,10 +66,14 @@ jobs:
           done
           echo "=== ~/.gradle/gradle.properties (if any) ==="
           cat "$HOME/.gradle/gradle.properties" 2>/dev/null || echo "(none)"
-          echo "=== lines mentioning the AGP artifact, BaseVariant, or kotlin-gradle-plugin jars ==="
-          grep -inE "com\.android\.tools\.build:gradle|BaseVariant|kotlin-gradle-plugin-[0-9]|kotlin-gradle-plugin-api" gradle-info.log | tail -200
-          echo "=== last 100 lines of the full info log ==="
-          tail -100 gradle-info.log
+          echo "=== 'What went wrong' failure summary block ==="
+          awk '/^\* What went wrong/{f=1} f{print; n++} n>120{exit}' gradle-info.log
+          echo "=== every distinct exception class name that appears as a Caused-by header ==="
+          grep -oE "Caused by: [A-Za-z0-9.$]+(Exception|Error)" gradle-info.log | sort -u
+          echo "=== first 'Caused by:' block in full (class + message + first 15 frames) ==="
+          awk '/^Caused by:/{f=1} f{print; n++} n>16{exit}' gradle-info.log
+          echo "=== last 'Caused by:' block in full (the deepest/root cause) ==="
+          tac gradle-info.log | awk '/^Caused by:/{print; f=1; next} f{print; n++} n>16{exit}' | tac
           exit "$BUILD_EXIT"
 
       - name: Upload debug APK
@@ -79,3 +83,18 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish GitHub Release with the APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: debug-build-${{ github.run_number }}
+          name: "Debug build #${{ github.run_number }} (Phase 1A/1B, unsigned/debug-signed)"
+          body: |
+            Automated debug APK build from branch `${{ github.ref_name }}` at commit ${{ github.sha }}.
+
+            This is a **debug build of the first Phase 1A/1B milestone** — Protect-mode
+            scaffold, trusted-contact CRUD, and the domain layer. There is no real
+            SMS/call/location integration yet (see docs/ROADMAP.md and docs/DEVIATIONS.md).
+            Expect bugs and missing features; more fixes are coming.
+          prerelease: true
+          files: app/build/outputs/apk/debug/*.apk
