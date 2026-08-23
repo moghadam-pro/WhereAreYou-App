@@ -1,21 +1,21 @@
 // NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced identically
-// across 11 straight CI runs under AGP 8.4.2/8.5.2/8.7.3, Gradle 8.14.3/8.6/8.7/8.9,
-// Kotlin 1.9.24 paired with every one of those, with/without KSP, and both plugin-
-// application mechanisms — ruling out AGP version, Gradle version, and application
-// mechanism as the sole cause (see docs/DEVIATIONS.md and this branch's commit history).
-// kotlin-gradle-plugin 1.9.24's KotlinAndroidTarget references the old BaseVariant API
-// directly in its public surface, which is what triggers Gradle's reflection-based
-// decorated-class generation to need that class at all; 2.0.21's K2-based Android target
-// was never actually retested under a clean, current AGP/Gradle pairing (the original
-// "downgrade to 1.9.24" theory was itself based on a stale environment). This moves :app
-// to Kotlin 2.0.21 to match :core exactly (avoiding two different Kotlin Gradle Plugin
-// versions in one build entirely) plus AGP's own paired Compose Compiler Gradle plugin
-// (org.jetbrains.kotlin.plugin.compose), which Kotlin 2.0+ requires in place of the old
-// composeOptions.kotlinCompilerExtensionVersion mechanism. Still applied imperatively via
-// buildscript{}/apply(plugin=) — that was never the BaseVariant cause, but it's what keeps
-// AGP resolution out of the root project's always-evaluated plugins{} block, letting
-// :core:test keep running in the local sandbox without reaching dl.google.com (see root
-// build.gradle.kts).
+// across 13 straight CI runs under AGP 8.4.2/8.5.2/8.7.3, Gradle 8.14.3/8.6/8.7/8.9, Kotlin
+// 1.9.24/2.0.21, with/without KSP, and both plugin-application mechanisms (see
+// docs/DEVIATIONS.md and this branch's commit history). A diagnostic that directly
+// inspected the resolved buildscript classpath jars with java.util.zip.ZipFile proved
+// BaseVariant.class DOES physically exist in gradle-8.7.3.jar (the full AGP jar) — this was
+// never a missing-class problem, it's a classloader-visibility one. The same diagnostic run
+// showed kotlin-gradle-plugin:2.0.21 resolving its "-gradle85" variant jar (Kotlin Gradle
+// Plugin publishes Gradle-version-targeted jars via Gradle Module Metadata) while the
+// wrapper runs Gradle 8.9 — a 4-minor-version gap between the jar's target Gradle
+// internal-API generation and the actual Gradle version running it, which is exactly the
+// kind of mismatch that could break Gradle's internal reflection-based ClassInspector/
+// AbstractClassGenerator machinery in ways that never show up when the two stay close
+// together (the overwhelmingly common case). Kotlin 2.1.0 is picked here specifically to
+// get a kotlin-gradle-plugin release published against a newer Gradle-API generation,
+// closer to Gradle 8.9. Still applied imperatively via buildscript{}/apply(plugin=) so AGP
+// resolution stays out of root build.gradle.kts's always-evaluated plugins{} block,
+// preserving local :core:test runnability without reaching dl.google.com.
 buildscript {
     repositories {
         google()
@@ -23,31 +23,9 @@ buildscript {
     }
     dependencies {
         classpath("com.android.tools.build:gradle:8.7.3")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
-        classpath("org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.0.21")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
+        classpath("org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.1.0")
     }
-}
-
-// DIAGNOSTIC (temporary): 12 straight CI runs hit the identical
-// NoClassDefFoundError: com/android/build/gradle/api/BaseVariant across every AGP
-// (8.4.2/8.5.2/8.7.3) x Gradle (8.6/8.7/8.9/8.14.3) x Kotlin (1.9.24/2.0.21) combination
-// and both plugin-application mechanisms tried — ruling out every version knob as the
-// cause. Before guessing another version, inspect the actual resolved buildscript
-// classpath jars directly to settle whether BaseVariant.class physically exists in the
-// AGP jar Gradle resolved here at all.
-buildscript.configurations.getByName("classpath").files.filter { f ->
-    f.name.startsWith("gradle-8") || f.name.startsWith("gradle-api-8") ||
-        f.name.startsWith("kotlin-gradle-plugin-2") || f.name == "builder-model-8.7.3.jar" ||
-        f.name.startsWith("builder-8")
-}.forEach { f ->
-    val hasBaseVariant = try {
-        java.util.zip.ZipFile(f).use { zip ->
-            zip.getEntry("com/android/build/gradle/api/BaseVariant.class") != null
-        }
-    } catch (e: Exception) {
-        "ERROR: ${e.message}"
-    }
-    println("DIAGNOSTIC classpath jar: ${f.name} -> BaseVariant.class present = $hasBaseVariant")
 }
 
 apply(plugin = "com.android.application")
@@ -55,7 +33,7 @@ apply(plugin = "kotlin-android")
 apply(plugin = "org.jetbrains.kotlin.plugin.compose")
 
 plugins {
-    id("com.google.devtools.ksp") version "2.0.21-1.0.28"
+    id("com.google.devtools.ksp") version "2.1.0-1.0.29"
 }
 
 // NOTE ON BUILD VERIFICATION (see /docs/DEVIATIONS.md):
