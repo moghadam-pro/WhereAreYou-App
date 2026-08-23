@@ -1,8 +1,12 @@
 plugins {
-    // :core's only plugin. :app now applies com.android.application and kotlin-android
-    // via the legacy buildscript{}/apply(plugin=) mechanism directly in
-    // app/build.gradle.kts (see that file for why), so it no longer needs — and must not
-    // repeat — a plugins{} DSL declaration for either here.
+    // :core's only plugin. Deliberately NOT declaring com.android.application or
+    // kotlin("android") here even with apply false: root's own plugins{} block is always
+    // evaluated (unlike a subproject's, which org.gradle.configureondemand=true can skip),
+    // so declaring AGP at root would force plugin-portal resolution — reaching
+    // dl.google.com — on every single Gradle invocation, including plain :core:test. This
+    // sandbox blocks that host (see docs/DEVIATIONS.md section 1), so :app applies AGP and
+    // kotlin-android imperatively instead, directly in app/build.gradle.kts, keeping
+    // :core:test runnable here without ever touching Google's Maven repo.
     kotlin("jvm") version "1.9.24" apply false
 }
 
