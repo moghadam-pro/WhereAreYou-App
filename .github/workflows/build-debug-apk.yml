@@ -60,7 +60,7 @@ jobs:
           BUILD_EXIT=$?
           echo "=== gradle exit code: $BUILD_EXIT ==="
           echo "=== global Gradle init scripts (if any) ==="
-          find / -path "*/.gradle/init.d*" -type f 2>/dev/null | while read -r f; do
+          find "$HOME/.gradle" /usr/share/gradle* /etc/gradle* -path "*init.d*" -type f 2>/dev/null | while read -r f; do
             echo "--- $f ---"
             cat "$f"
           done
