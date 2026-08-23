@@ -1,8 +1,11 @@
 plugins {
-    // :core only ever needs kotlin("jvm") — it has no Android/AGP dependency at all.
-    // :app pins its own kotlin("android")/AGP/KSP versions directly in app/build.gradle.kts
-    // (see the comment there for why they deliberately don't match :core's Kotlin version).
-    kotlin("jvm") version "2.0.21" apply false
+    // Must match :app's kotlin("android") version in app/build.gradle.kts exactly: a
+    // single Gradle build shares one plugin classpath, so kotlin("jvm") here and
+    // kotlin("android") there resolving to different Kotlin Gradle Plugin versions fails
+    // configuration with "the plugin is already on the classpath with an unknown version"
+    // (hit for real on CI). :core has no AGP dependency, so it is otherwise indifferent to
+    // which Kotlin version it runs — see app/build.gradle.kts for why 1.9.24 was chosen.
+    kotlin("jvm") version "1.9.24" apply false
 }
 
 tasks.register("clean", Delete::class) {
