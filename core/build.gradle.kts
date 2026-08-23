@@ -7,10 +7,11 @@ plugins {
 // they can be unit tested on a plain JVM (see AGENTS.md "Architecture rules").
 
 kotlin {
-    // Android's Kotlin/JVM target for this project is 17 (see app/build.gradle.kts).
-    // This sandbox only has a JDK 21 installed, so the toolchain here targets 21;
-    // both are >= the language level core actually uses (Java 8/11-compatible stdlib calls).
-    jvmToolchain(21)
+    // Must match :app's JVM target (17, see app/build.gradle.kts) and stay a value the
+    // Kotlin 1.8.22 compiler recognizes: it maps a resolved toolchain JavaVersion straight to
+    // its JvmTarget enum, which in 1.8.22 tops out below 21 — CI resolves a real JDK 21 (also
+    // installed) when this said 21, and compileKotlin died with "Unknown Kotlin JVM target: 21".
+    jvmToolchain(17)
 }
 
 dependencies {
