@@ -70,28 +70,35 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
+// Uses add("implementation", ...) instead of the typed implementation(...) accessor:
+// those accessor extension functions are only pre-compiled for plugins declared via
+// the plugins{} block (resolved before script compilation). com.android.application and
+// kotlin-android are applied imperatively above via apply(plugin = "..."), so their
+// configurations (implementation, debugImplementation) don't get generated accessors and
+// the typed form fails script compilation with "Unresolved reference". add(...) is part
+// of the core DependencyHandler interface and works regardless of how a plugin was applied.
 dependencies {
-    implementation(project(":core"))
+    add("implementation", project(":core"))
 
     val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
-    implementation(composeBom)
+    add("implementation", composeBom)
 
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
-    implementation("androidx.activity:activity-compose:1.9.2")
-    implementation("androidx.navigation:navigation-compose:2.8.1")
+    add("implementation", "androidx.core:core-ktx:1.13.1")
+    add("implementation", "androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
+    add("implementation", "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
+    add("implementation", "androidx.activity:activity-compose:1.9.2")
+    add("implementation", "androidx.navigation:navigation-compose:2.8.1")
 
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
+    add("implementation", "androidx.compose.ui:ui")
+    add("implementation", "androidx.compose.ui:ui-graphics")
+    add("implementation", "androidx.compose.ui:ui-tooling-preview")
+    add("implementation", "androidx.compose.material3:material3")
 
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    add("implementation", "androidx.datastore:datastore-preferences:1.1.1")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    add("implementation", "androidx.room:room-runtime:2.6.1")
+    add("implementation", "androidx.room:room-ktx:2.6.1")
+    add("ksp", "androidx.room:room-compiler:2.6.1")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    add("debugImplementation", "androidx.compose.ui:ui-tooling")
 }
