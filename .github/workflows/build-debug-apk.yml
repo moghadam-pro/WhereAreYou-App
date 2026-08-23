@@ -66,6 +66,8 @@ jobs:
           done
           echo "=== ~/.gradle/gradle.properties (if any) ==="
           cat "$HOME/.gradle/gradle.properties" 2>/dev/null || echo "(none)"
+          echo "=== DIAGNOSTIC: does BaseVariant.class physically exist in the resolved buildscript classpath jars? ==="
+          grep "DIAGNOSTIC classpath jar" gradle-info.log
           echo "=== 'What went wrong' failure summary block ==="
           awk '/^\* What went wrong/{f=1} f{print; n++} n>120{exit}' gradle-info.log
           echo "=== every distinct exception class name that appears as a Caused-by header ==="
