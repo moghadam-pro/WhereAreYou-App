@@ -90,9 +90,33 @@ Phase 2 should define a transport adapter interface so users can optionally choo
 - [`docs/DISCOVERY_NOTES.md`](docs/DISCOVERY_NOTES.md) — design rationale and conversation-derived decisions
 - [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md) — Android/build-environment restrictions that forced a deviation from the spec, and why
 
+## License
+
+WhereAreYou is free and open source under the [Apache License 2.0](LICENSE) — free to use,
+study, modify, redistribute and self-build, including commercially, with an explicit patent
+grant. There is no paid tier, no account, no telemetry and no developer-operated server;
+see the "No mandatory backend" and "No covert surveillance" principles above.
+
+Contributions are welcome. Please read [`AGENTS.md`](AGENTS.md) and the documents under
+`docs/` first — the core invariants there (event-driven only, no continuous tracking, no
+covert behaviour) are product requirements, not stylistic preferences, and a change that
+breaks one of them will not be merged.
+
 ## Distribution note
 
-SMS and Call Log permissions are highly restricted on Google Play. Early builds should be treated as open-source/private-test builds distributed through GitHub Releases or another appropriate channel. Play Store publication needs a separate policy review and may require a materially different permission strategy.
+SMS and Call Log permissions are highly restricted on Google Play. Builds are distributed
+as open-source test builds through [GitHub Releases](../../releases) and can always be
+built from source yourself. Play Store publication needs a separate policy review and may
+require a materially different permission strategy.
+
+### Installing a release build
+
+Releases are **beta, debug-signed** APKs. Their application ID is
+`com.whereareyou.app.debug`, so they install alongside any future release build, and
+Android will warn that the app comes from an unknown source — you have to allow your
+browser or file manager to install it. Because they are debug-signed with a throwaway key,
+these builds cannot be upgraded in place to a future production-signed release; you would
+uninstall and reinstall.
 
 ## Status
 
