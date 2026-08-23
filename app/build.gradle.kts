@@ -1,21 +1,26 @@
+// NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced identically
+// across 9 straight CI runs trying the plugins{} DSL: AGP 8.5.2/8.4.2, Gradle
+// 8.14.3/8.6/8.7, Kotlin 2.0.21/1.9.24, and with/without KSP (see docs/DEVIATIONS.md and
+// this branch's commit history) — ruling out every version combination as the cause and
+// pointing at the plugins{} DSL's plugin-classloader isolation itself. This switches
+// com.android.application and kotlin-android to the legacy buildscript{} + apply(plugin=)
+// mechanism, a different Gradle code path that does not go through the same
+// plugin-marker/classloader isolation as the plugins{} block.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.5.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
+    }
+}
+
+apply(plugin = "com.android.application")
+apply(plugin = "kotlin-android")
+
 plugins {
-    // NoClassDefFoundError: com/android/build/gradle/api/BaseVariant reproduced
-    // identically across AGP 8.5.2/8.4.2, Gradle 8.14.3/8.6, Kotlin 2.0.21/1.9.24, and
-    // with/without KSP (8 straight CI runs — see docs/DEVIATIONS.md and this branch's
-    // commit history). A CI run with --info logging showed the real AGP jar (with
-    // BaseVariant) DOES resolve onto the classpath alongside a separate, lean
-    // com.android.tools.build:gradle-api jar (the New Variant API surface, which does not
-    // ship BaseVariant) — pointing at a plugin-classloader interaction, not a missing
-    // artifact. AGP 8.5.2 + Kotlin 1.9.24 + Gradle 8.7 is the specific trio actually
-    // shipped together in Android Studio's own Compose project template for this Kotlin
-    // line, so it's the next attempt instead of another blind version guess.
-    //
-    // No version here for kotlin("android"): pinned once via the root build.gradle.kts
-    // apply-false declaration (kept in sync with :core's kotlin("jvm") version there) —
-    // repeating a version here alongside the root's apply-false entry produced "the plugin
-    // is already on the classpath with an unknown version" on a real CI run.
-    id("com.android.application") version "8.5.2"
-    kotlin("android")
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
 }
 
@@ -30,9 +35,9 @@ plugins {
 // normal Android Studio environment (or any CI runner with SDK + Google Maven access)
 // before it can be trusted.
 
-android {
+configure<com.android.build.gradle.AppExtension> {
     namespace = "com.whereareyou.app"
-    compileSdk = 34
+    compileSdkVersion(34)
 
     defaultConfig {
         applicationId = "com.whereareyou.app"
@@ -47,23 +52,21 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
-    buildFeatures {
-        compose = true
-    }
+    buildFeatures.compose = true
 
     composeOptions {
         // Must match Kotlin 1.9.24 per Google's Compose-Kotlin compatibility map.
         kotlinCompilerExtensionVersion = "1.5.14"
     }
 
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
+    packagingOptions {
+        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
