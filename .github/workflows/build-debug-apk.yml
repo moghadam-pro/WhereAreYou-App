@@ -32,13 +32,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK (17 default, 21 available for :core's toolchain)
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: |
-            21
-            17
+          java-version: 17
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -53,31 +51,21 @@ jobs:
       - name: Run :core unit tests
         run: ./gradlew :core:test --no-daemon --stacktrace
 
-      - name: Build debug APK (diagnostic - find the actual resolved AGP artifact)
+      - name: Build debug APK
         run: |
           set +e
           ./gradlew :app:assembleDebug --no-daemon --stacktrace > gradle-info.log 2>&1
           BUILD_EXIT=$?
-          echo "=== gradle exit code: $BUILD_EXIT ==="
-          echo "=== global Gradle init scripts (if any) ==="
-          find "$HOME/.gradle" /usr/share/gradle* /etc/gradle* -path "*init.d*" -type f 2>/dev/null | while read -r f; do
-            echo "--- $f ---"
-            cat "$f"
-          done
-          echo "=== ~/.gradle/gradle.properties (if any) ==="
-          cat "$HOME/.gradle/gradle.properties" 2>/dev/null || echo "(none)"
-          echo "=== DIAGNOSTIC: does BaseVariant.class physically exist in the resolved buildscript classpath jars? ==="
-          grep "DIAGNOSTIC classpath jar" gradle-info.log
-          echo "=== DIAGNOSTIC: KotlinAndroidTarget's actual runtime classloader vs this script's, and BaseVariant loadability from each ==="
-          grep "^DIAGNOSTIC:" gradle-info.log
-          echo "=== 'What went wrong' failure summary block ==="
-          awk '/^\* What went wrong/{f=1} f{print; n++} n>120{exit}' gradle-info.log
-          echo "=== every distinct exception class name that appears as a Caused-by header ==="
-          grep -oE "Caused by: [A-Za-z0-9.$]+(Exception|Error)" gradle-info.log | sort -u
-          echo "=== first 'Caused by:' block in full (class + message + first 15 frames) ==="
-          awk '/^Caused by:/{f=1} f{print; n++} n>16{exit}' gradle-info.log
-          echo "=== last 'Caused by:' block in full (the deepest/root cause) ==="
-          tac gradle-info.log | awk '/^Caused by:/{print; f=1; next} f{print; n++} n>16{exit}' | tac
+          if [ "$BUILD_EXIT" -ne 0 ]; then
+            echo "=== 'What went wrong' failure summary block ==="
+            awk '/^\* What went wrong/{f=1} f{print; n++} n>120{exit}' gradle-info.log
+            echo "=== first 'Caused by:' block in full (class + message + first 15 frames) ==="
+            awk '/^Caused by:/{f=1} f{print; n++} n>16{exit}' gradle-info.log
+            echo "=== last 'Caused by:' block in full (the deepest/root cause) ==="
+            tac gradle-info.log | awk '/^Caused by:/{print; f=1; next} f{print; n++} n>16{exit}' | tac
+          else
+            cat gradle-info.log
+          fi
           exit "$BUILD_EXIT"
 
       - name: Upload debug APK
