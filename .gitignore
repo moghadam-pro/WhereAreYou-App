@@ -9,6 +9,7 @@ local.properties
 .DS_Store
 /captures
 .cxx/
+*.apk
 
 # Cross-platform OS metadata
 ._*
