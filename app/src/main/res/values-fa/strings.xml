@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">بابایاب</string>
+    <string name="permissions_title">دسترسی‌ها و وضعیت آمادگی</string>
+    <string name="permissions_grant_core">اعطای دسترسی‌های اصلی</string>
+    <string name="permissions_open_settings">باز کردن تنظیمات برنامه</string>
+    <string name="status_granted">تأیید شده</string>
+    <string name="status_missing">دسترسی داده نشده</string>
+    <string name="status_optional">اختیاری</string>
+    <string name="btn_grant">اعطا</string>
+    
+    <string name="perm_sms_title">دریافت و ارسال پیامک</string>
+    <string name="perm_sms_label">دریافت پیامک / ارسال پیامک</string>
+    <string name="perm_sms_desc">جهت دریافت دستورات امنیتی از مخاطبین مورد اعتماد و ارسال پیامک حاوی موقعیت مکانی.</string>
+
+    <string name="perm_calls_title">تشخیص تماس‌های بی‌پاسخ</string>
+    <string name="perm_calls_label">گزارش تماس‌ها و وضعیت تلفن</string>
+    <string name="perm_calls_desc">شمارش تماس‌های مکرر بی‌پاسخ از مخاطبین مطمئن در بازه زمانی تعیین‌شده برای فعال‌سازی وضعیت اضطراری.</string>
+
+    <string name="perm_location_title">موقعیت مکانی دقیق</string>
+    <string name="perm_location_label">موقعیت مکانی دقیق و تقریبی</string>
+    <string name="perm_location_desc">دریافت مختصات GPS و دقت موقعیت جهت ارسال موقعیت دقیق در شرایط اضطراری.</string>
+
+    <string name="perm_bg_location_title">موقعیت مکانی در پس‌زمینه</string>
+    <string name="perm_bg_location_label">دسترسی در تمام اوقات (Allow all the time)</string>
+    <string name="perm_bg_location_desc">امکان نمونه‌برداری و به‌روزرسانی موقعیت حتی زمانی که صفحه خاموش است یا برنامه بسته است.</string>
+
+    <string name="perm_notifications_title">اعلان‌های وضعیت امنیتی</string>
+    <string name="perm_notifications_label">اعلان‌ها</string>
+    <string name="perm_notifications_desc">نمایش اعلان واضح روی صفحه گوشی هنگام فعال بودن نشست امنیتی جهت آگاهی کاربر.</string>
+
+    <string name="perm_call_phone_title">تماس اضطراری خودکار</string>
+    <string name="perm_call_phone_label">برقراری تماس</string>
+    <string name="perm_call_phone_desc">اختیاری. فقط در صورتی استفاده می‌شود که تماس اضطراری را برای مخاطب فعال کرده باشید.</string>
+
+    <string name="readiness_ready_title">سیستم آماده به کار است</string>
+    <string name="readiness_ready_desc">تمام مجوزهای ضروری تأیید شده‌اند و سیستم آماده محافظت است.</string>
+    <string name="readiness_missing_title">نیاز به اعطای دسترسی</string>
+    <string name="readiness_missing_desc">دسترسی‌های پیامک، تماس یا موقعیت مکانی داده نشده‌اند. برای اعطا لمس کنید.</string>
+
+    <string name="trusted_contacts_title">مخاطبین مورد اعتماد</string>
+    <string name="no_contacts">هنوز مخاطب مطمئنی افزوده نشده است. برای شروع یکی اضافه کنید.</string>
+    <string name="safety_session_title">نشست امنیتی</string>
+    <string name="safety_session_idle">در حال حاضر نشست امنیتی فعالی وجود ندارد.</string>
+</resources>

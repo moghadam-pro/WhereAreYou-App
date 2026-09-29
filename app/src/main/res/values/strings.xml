@@ -1,3 +1,44 @@
 <resources>
-    <string name="app_name">WhereAreYou</string>
+    <string name="app_name">DadFinder</string>
+    <string name="permissions_title">Permissions &amp; readiness</string>
+    <string name="permissions_grant_core">Grant all permissions</string>
+    <string name="permissions_open_settings">Open App Settings</string>
+    <string name="status_granted">Granted</string>
+    <string name="status_missing">Missing</string>
+    <string name="status_optional">Optional</string>
+    <string name="btn_grant">Grant</string>
+    
+    <string name="perm_sms_title">SMS Command &amp; Alerts</string>
+    <string name="perm_sms_label">Receive SMS / Send SMS</string>
+    <string name="perm_sms_desc">Allows DadFinder to receive safety triggers from trusted contacts and send SMS location replies.</string>
+
+    <string name="perm_calls_title">Missed-Call Escalation</string>
+    <string name="perm_calls_label">Call Log &amp; Phone State</string>
+    <string name="perm_calls_desc">Counts repeated missed calls from trusted contacts within the configured time window to trigger safety mode.</string>
+
+    <string name="perm_location_title">Location Sampling</string>
+    <string name="perm_location_label">Precise &amp; Coarse Location</string>
+    <string name="perm_location_desc">Captures GPS coordinates and accuracy to report current whereabouts when triggered.</string>
+
+    <string name="perm_bg_location_title">Background Location</string>
+    <string name="perm_bg_location_label">Allow all the time</string>
+    <string name="perm_bg_location_desc">Allows taking updated follow-up GPS samples (T+2, T+5 min) even if the screen is off or app is closed.</string>
+
+    <string name="perm_notifications_title">Safety Session Alert</string>
+    <string name="perm_notifications_label">Notifications</string>
+    <string name="perm_notifications_desc">Displays a persistent notification on the device whenever a safety session is active.</string>
+
+    <string name="perm_call_phone_title">Emergency Callback</string>
+    <string name="perm_call_phone_label">Call Phone</string>
+    <string name="perm_call_phone_desc">Optional. Only used if you enable Emergency Callback for a specific trusted contact.</string>
+
+    <string name="readiness_ready_title">Protection is ready</string>
+    <string name="readiness_ready_desc">All required permissions are granted. Event monitoring is ready.</string>
+    <string name="readiness_missing_title">Permissions needed</string>
+    <string name="readiness_missing_desc">SMS, Call Log, or Location permissions are missing. Tap to grant.</string>
+    
+    <string name="trusted_contacts_title">Trusted contacts</string>
+    <string name="no_contacts">No trusted contacts yet. Add one to get started.</string>
+    <string name="safety_session_title">Safety session</string>
+    <string name="safety_session_idle">No active safety session. Triggers will start a session automatically.</string>
 </resources>
