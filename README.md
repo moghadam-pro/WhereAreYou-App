@@ -1,4 +1,4 @@
-# WhereAreYou
+# WhereAreYou / DadFinder (بابایاب)
 
 An **event-driven family safety agent for Android**.
 
@@ -118,25 +118,35 @@ browser or file manager to install it. Because they are debug-signed with a thro
 these builds cannot be upgraded in place to a future production-signed release; you would
 uninstall and reinstall.
 
+## Recent Updates (Phase 1A/1B+ Readiness Milestone)
+
+- **Runtime Permissions & Interactive Readiness Flow**:
+  - Declared all required platform permissions in [`AndroidManifest.xml`](app/src/main/AndroidManifest.xml): SMS (`RECEIVE_SMS`, `SEND_SMS`), Call Log & Phone State (`READ_CALL_LOG`, `READ_PHONE_STATE`), Fine & Background Location (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`), and Notifications (`POST_NOTIFICATIONS`).
+  - Implemented automatic runtime permission prompt on app launch whenever core safety permissions are missing.
+  - Upgraded [`PermissionsScreen`](app/src/main/kotlin/com/whereareyou/app/permissions/PermissionsScreen.kt) to live-evaluate permission states, provide per-permission and batch "Grant" actions, and offer direct access to App Settings.
+  - Added a reactive readiness banner to [`HomeScreen`](app/src/main/kotlin/com/whereareyou/app/ui/HomeScreen.kt) with real-time status badges and instant grant triggers.
+- **Bilingual Localization (English & Persian)**:
+  - English default (`res/values/strings.xml`): Application name is **DadFinder** with complete English explanations.
+  - Persian locale (`res/values-fa/strings.xml`): Application name is **بابایاب** with fully localized UI and permission rationales.
+- **Modern Adaptive Launcher Icons**:
+  - Generated standard Android Adaptive Icons (`mipmap-anydpi-v26`) with a smooth blue gradient background and safe-zone centered character foreground.
+  - Generated legacy and circular mipmap icons across all standard densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`).
+
 ## Status
 
-**Phase 1A/1B implemented.**
+**Phase 1A/1B implemented with active permission readiness.**
 
 - `:core` — pure Kotlin/JVM domain layer: trusted-contact + capability model, missed-call
   trigger rules (per-contact and aggregate), the `TriggerEngine`, SMS command
   authentication/replay/rate-limiting, the status + command SMS protocol codec, and the
   `SafetySession` state machine. 120 unit tests, all passing.
-- `:app` — Android/Kotlin/Jetpack Compose scaffold: Protect home screen, trusted-contact
-  CRUD with per-contact capability toggles, Room + DataStore persistence, a permission
-  readiness screen skeleton. No dangerous permissions requested yet and no platform event
-  adapters (BroadcastReceivers) wired — that is Phase 1C onward, intentionally out of scope
-  here. Builds to an installable debug APK (`com.whereareyou.app.debug`, minSdk 26,
-  targetSdk 35) via `./gradlew :app:assembleDebug`; the toolchain it needs and the
-  classloader bug that blocked it for a long time are written up in `docs/DEVIATIONS.md`
-  section 1. It has been compiled and packaged, but not yet run on a physical device.
+- `:app` — Android/Kotlin/Jetpack Compose UI: Protect home screen, trusted-contact
+  CRUD with per-contact capability toggles, Room + DataStore persistence, dynamic permission
+  readiness and interactive runtime permission management. Builds to an installable debug APK
+  (`com.whereareyou.app.debug`, minSdk 26, targetSdk 35) via `./gradlew :app:assembleDebug`.
 - `tools/decoder/` — offline static decoder/PWA, dependency-free, with its own test suite
   sharing vectors with `:core`'s protocol tests.
 
 Start by reading `AGENTS.md` and the documents under `docs/` before writing production code.
-Phase 1C+ (real SMS/call-log/telecom/background-location integration) should build on this
-domain layer rather than around it.
+Phase 1C+ (real SMS/call-log/telecom/background-location integration) will wire platform event
+receivers into the tested `TriggerEngine`.
