@@ -27,5 +27,5 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 - Initial beta: Protect UI, trusted contacts, permission readiness, `:core` domain layer, static decoder.
 
 [Unreleased]: https://github.com/moghadam-pro/WhereAreYou-App/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/moghadam-pro/WhereAreYou-App/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/moghadam-pro/WhereAreYou-App/releases/tag/v0.1.0
+[0.1.1]: https://github.com/moghadam-pro/WhereAreYou-App/compare/v0.1.0-beta.28...v0.1.1
+[0.1.0]: https://github.com/moghadam-pro/WhereAreYou-App/releases/tag/v0.1.0-beta.28
