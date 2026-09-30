@@ -109,16 +109,35 @@ as open-source test builds through [GitHub Releases](../../releases) and can alw
 built from source yourself. Play Store publication needs a separate policy review and may
 require a materially different permission strategy.
 
-### Installing a release build
+### Installing a release build / راهنمای نصب و رفع خطای نصب
 
-Releases are signed **Release APKs** (`com.whereareyou.app`) signed with a persistent project keystore (supporting APK Signature Scheme v1, v2, and v3).
+Releases are signed **Release APKs** (`com.whereareyou.app`) signed with a persistent project keystore (`keystore/release.jks`) supporting APK Signature Scheme v1, v2, and v3.
 
-Because the APK is sideloaded directly (outside Google Play) and declares SMS/Call Log/Location safety permissions:
-1. **Google Play Protect**: Android will prompt: *"App blocked to protect your device — Play Protect hasn't seen an app from this developer before"*.
-   - Tap **"Install anyway"** (نصب در هر حال) to proceed.
-   - **Do NOT tap "Got it"** (متوجه شدم) — tapping "Got it" cancels the installation and results in *"App not installed"*.
-2. **Samsung Devices (One UI 6+)**: Ensure **Auto Blocker (مسدودکننده خودکار)** in *Settings > Security and Privacy* is temporarily toggled off if it blocks sideloading.
-3. **Upgrade from older debug builds**: If an earlier test build with a different signature was previously installed, **uninstall it first** before installing the release build to prevent `INSTALL_FAILED_UPDATE_INCOMPATIBLE` ("App not installed").
+#### ۱. دریافت فایل نصبی (Download APK)
+* **از روی سیستم محلی (Local - آماده و سریع):** فایل پکیج به صورت کامل بیلد شده و در ریشه پروژه قرار دارد:
+  [`DadFinder-v0.1.0-release.apk`](DadFinder-v0.1.0-release.apk)
+* **از گیت‌هاب (GitHub Releases):** می‌توانید فایل APK را مستقیماً از بخش [GitHub Releases](../../releases) دریافت کنید.
+
+#### ۲. مراحل نصب صحیح روی گوشی و رفع خطای `App not installed`
+اگر در هنگام نصب با اخطار Google Play Protect یا پیام **"App not installed"** مواجه شدید، به ترتیب زیر عمل کنید:
+
+1. **حذف نسخه قبلی (Uninstall Previous Version):**
+   اگر از قبل نسخه‌ای از برنامه (یا نسخه تستی قبلی) روی گوشی نصب است، حتماً ابتدا آن را حذف (Uninstall) کنید تا خطای تداخل امضا (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) رخ ندهد.
+2. **عبور صحیح از پنجره اخطار Google Play Protect:**
+   به دلیل نصب فایل خارج از گوگل‌پلی (Sideload) و داشتن دسترسی‌های حساس پیامک و تماس و موقعیت مکانی، اخطار زیر نمایش داده می‌شود:
+   > *"App blocked to protect your device — Play Protect hasn't seen an app from this developer before"*
+   
+   در این پنجره:
+   * ❌ **به هیچ وجه روی دکمه آبی `Got it` (متوجه شدم) کلیک نکنید!** این دکمه پیش‌فرض گوگل برای لغو نصب است و با زدن آن، خطای *"App not installed"* ظاهر می‌شود.
+   * ✅ **روی گزینه متنی `Install anyway` (نصب در هر حال) کلیک کنید** تا نصب تکمیل شود.
+3. **بررسی قابلیت Auto Blocker در گوشی‌های سامسونگ (Samsung One UI 6+):**
+   اگر از گوشی سامسونگ استفاده می‌کنید و برنامه باز هم نصب نشد، موقتاً مسدودکننده خودکار را خاموش کنید:
+   * **تنظیمات (Settings) ➔ امنیت و حریم خصوصی (Security and privacy) ➔ مسدودکننده خودکار (Auto Blocker) ➔ خاموش (Off)**
+4. **تغییرات فنی انجام‌شده در نسخه Release:**
+   * پورت‌های دیباگ بسته شده‌اند (`debuggable = false`) تا توسط اسکنرهای امنیتی بلاک نشود.
+   * برنامه با کلید پایدار `keystore/release.jks` و هر سه طرح امضای استاندارد اندروید (v1 JAR + v2 Full APK + v3) امضا شده است.
+   * وابستگی‌های سخت‌افزاری (`telephony` و `location`) اختیاری (`android:required="false"`) شده‌اند تا ناسازگاری دستگاهی ایجاد نشود.
+   * حجم برنامه بهینه شده و به **۷.۹ مگابایت** کاهش یافته است.
 
 ## Recent Updates (Phase 1A/1B+ Readiness Milestone)
 
