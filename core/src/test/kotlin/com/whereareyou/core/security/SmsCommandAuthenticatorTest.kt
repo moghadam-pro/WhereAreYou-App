@@ -144,4 +144,16 @@ class SmsCommandAuthenticatorTest {
         val authorized = assertIs<SmsAuthorizationResult.Authorized>(result)
         assertEquals(SmsCommandKind.EMERGENCY_CALLBACK_REQUEST, authorized.kind)
     }
+
+    @Test
+    fun `repeated wrong codes lock the contact out even for the right code`() {
+        val authenticator = SmsCommandAuthenticator()
+        repeat(10) { i ->
+            val at = base.plusSeconds(i.toLong())
+            authenticator.authorize(event("وضعیت 000$i", at), contact(), at)
+        }
+        val at = base.plusSeconds(60)
+        val result = authenticator.authorize(event("وضعیت 7314", at), contact(), at)
+        assertIs<SmsAuthorizationResult.Rejected>(result)
+    }
 }

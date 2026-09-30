@@ -10,11 +10,11 @@
 // AGP. Declaring both at root puts them in the same scope; :app then applies them
 // without repeating a version.
 plugins {
-    kotlin("jvm") version "2.0.21" apply false
-    kotlin("android") version "2.0.21" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21" apply false
-    id("com.android.application") version "8.9.1" apply false
-    id("com.google.devtools.ksp") version "2.0.21-1.0.28" apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.ksp) apply false
 }
 
 tasks.register("clean", Delete::class) {

@@ -39,6 +39,9 @@ object PhoneNumberNormalizer {
     /** National trunk prefix stripped before applying [DEFAULT_COUNTRY_CODE]. */
     private const val NATIONAL_TRUNK_PREFIX = "0"
 
+    /** International call prefix ("00") that stands in for '+'. */
+    private const val INTERNATIONAL_DIAL_PREFIX = "00"
+
     private val ALLOWED_SEPARATORS = charArrayOf(' ', '-', '(', ')', ' ', '‌')
 
     fun normalize(raw: String, defaultCountryCode: String = DEFAULT_COUNTRY_CODE): NormalizedPhoneNumber {
@@ -60,6 +63,14 @@ object PhoneNumberNormalizer {
                 }
                 digits
             }
+            digitsWithPlus.startsWith(INTERNATIONAL_DIAL_PREFIX) -> {
+                // "0098912..." is the international form written with the 00 exit code.
+                val digits = digitsWithPlus.drop(INTERNATIONAL_DIAL_PREFIX.length)
+                if (!isPlausibleE164Digits(digits)) {
+                    return NormalizedPhoneNumber.Invalid("implausible E.164 length", display)
+                }
+                digits
+            }
             digitsWithPlus.startsWith(NATIONAL_TRUNK_PREFIX) -> {
                 val national = digitsWithPlus.drop(NATIONAL_TRUNK_PREFIX.length)
                 if (national.isEmpty() || !national.all(Char::isDigit)) {
@@ -71,9 +82,16 @@ object PhoneNumberNormalizer {
                 }
                 full
             }
-            digitsWithPlus.all(Char::isDigit) && digitsWithPlus.length >= 8 -> {
-                // Already looks like a full country-code + subscriber number without '+'.
+            digitsWithPlus.all(Char::isDigit) && digitsWithPlus.startsWith(defaultCountryCode) &&
+                isPlausibleE164Digits(digitsWithPlus) -> {
+                // Country code written without '+' (e.g. "989121234567"). Only accepted when it
+                // starts with the configured country code; anything else is ambiguous.
                 digitsWithPlus
+            }
+            defaultCountryCode == DEFAULT_COUNTRY_CODE && digitsWithPlus.length == 10 &&
+                digitsWithPlus.startsWith("9") && digitsWithPlus.all(Char::isDigit) -> {
+                // Iranian mobile written without the trunk 0 (e.g. "9121234567").
+                defaultCountryCode + digitsWithPlus
             }
             else -> return NormalizedPhoneNumber.Invalid("ambiguous local number", display)
         }

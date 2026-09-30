@@ -19,3 +19,9 @@ local.properties
 ehthumbs.db
 [Dd]esktop.ini
 $RECYCLE.BIN/
+
+# Release signing material — never commit (see docs/RELEASING.md)
+keystore/
+keystore.properties
+*.jks
+*.keystore

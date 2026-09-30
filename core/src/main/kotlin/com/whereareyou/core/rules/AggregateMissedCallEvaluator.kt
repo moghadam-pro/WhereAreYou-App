@@ -32,6 +32,22 @@ class AggregateMissedCallEvaluator(private val config: AggregateMissedCallRuleCo
     private val recentCalls = mutableListOf<Entry>()
     private var cooldownUntil: Instant? = null
 
+    fun exportState(): Map<String, List<Long>> = buildMap {
+        recentCalls.groupBy { it.contactId }.forEach { (id, e) -> put("a:${id.value}", e.map { it.at.toEpochMilli() }) }
+        cooldownUntil?.let { put("d:", listOf(it.toEpochMilli())) }
+    }
+
+    fun restoreState(state: Map<String, List<Long>>) {
+        recentCalls.clear(); cooldownUntil = null
+        state.forEach { (key, values) ->
+            when (key.take(2)) {
+                "a:" -> values.forEach { recentCalls.add(Entry(TrustedContactId(key.drop(2)), Instant.ofEpochMilli(it))) }
+                "d:" -> cooldownUntil = values.firstOrNull()?.let(Instant::ofEpochMilli)
+            }
+        }
+        recentCalls.sortBy { it.at }
+    }
+
     fun onMissedCall(contactId: TrustedContactId, at: Instant): MissedCallEvaluation {
         if (!config.enabled) return MissedCallEvaluation.NotTriggered(0)
 
@@ -40,8 +56,9 @@ class AggregateMissedCallEvaluator(private val config: AggregateMissedCallRuleCo
             return MissedCallEvaluation.InCooldown
         }
 
-        recentCalls.add(Entry(contactId, at))
         val windowStart = at.minus(config.window)
+        recentCalls.removeAll { it.at.isBefore(windowStart) } // bound memory
+        recentCalls.add(Entry(contactId, at))
         val relevant = recentCalls.filter { !it.at.isBefore(windowStart) }.sortedBy { it.at }
 
         return if (relevant.size >= config.threshold) {
@@ -51,10 +68,12 @@ class AggregateMissedCallEvaluator(private val config: AggregateMissedCallRuleCo
         }
     }
 
-    fun onAnsweredCall(at: Instant) {
-        // An answered call establishes contact was reachable; clear the shared counter
-        // the same way a single-contact reset marker would.
-        recentCalls.removeAll { !it.at.isAfter(at) }
+    /**
+     * An answered call proves *that* contact is reachable, so only that contact's earlier
+     * missed calls stop counting; other contacts' misses still count towards the shared total.
+     */
+    fun onAnsweredCall(contactId: TrustedContactId, at: Instant) {
+        recentCalls.removeAll { it.contactId == contactId && !it.at.isAfter(at) }
     }
 
     fun onSessionCompleted(at: Instant) {

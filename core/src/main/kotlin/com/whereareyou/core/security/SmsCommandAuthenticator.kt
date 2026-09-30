@@ -9,6 +9,7 @@ import com.whereareyou.core.protocol.SmsCommandPhraseParser
 import com.whereareyou.core.rules.SmsAuthorizationResult
 import com.whereareyou.core.rules.SmsCommandAuthorizer
 import com.whereareyou.core.rules.SmsCommandKind
+import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 
@@ -23,6 +24,8 @@ import java.time.Instant
 class SmsCommandAuthenticator(
     private val replayGuard: ReplayGuard = ReplayGuard(),
     private val rateLimiter: RateLimiter = RateLimiter(maxEvents = 5, window = Duration.ofHours(1)),
+    /** Caps wrong-code guesses per contact; once hit, even the right code is refused until it ages out. */
+    private val failureLimiter: RateLimiter = RateLimiter(maxEvents = 10, window = Duration.ofHours(1)),
     private val recognizedPhrases: Set<String> = SmsCommandPhraseParser.DEFAULT_PHRASES,
 ) : SmsCommandAuthorizer {
 
@@ -44,7 +47,12 @@ class SmsCommandAuthenticator(
 
         val parsed = parseCommand(event.body) ?: return SmsAuthorizationResult.Rejected("unrecognized command format")
 
-        if (parsed.authCode != secret) {
+        val failureKey = contact.id.value
+        if (failureLimiter.currentCount(failureKey, at) >= MAX_FAILED_CODES) {
+            return SmsAuthorizationResult.Rejected("too many failed attempts")
+        }
+        if (!constantTimeEquals(parsed.authCode, secret)) {
+            failureLimiter.tryAcquire(failureKey, at)
             return SmsAuthorizationResult.Rejected("invalid auth code")
         }
 
@@ -90,7 +98,11 @@ class SmsCommandAuthenticator(
         CommandCode.EMERGENCY_CALLBACK_REQUEST -> SmsCommandKind.EMERGENCY_CALLBACK_REQUEST
     }
 
+    private fun constantTimeEquals(a: String, b: String): Boolean =
+        MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
+
     private companion object {
+        const val MAX_FAILED_CODES = 10
         const val COMPACT_MARKER_PREFIX = "ک"
     }
 }

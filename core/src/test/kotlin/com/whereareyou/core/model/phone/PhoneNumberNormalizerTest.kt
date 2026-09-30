@@ -88,4 +88,25 @@ class PhoneNumberNormalizerTest {
         val valid = assertIs<NormalizedPhoneNumber.Valid>(result)
         assertEquals("0912 123 4567", valid.display)
     }
+
+    @Test
+    fun `double-zero international prefix is treated as plus`() {
+        assertEquals("+989121234567", canonicalOf("00989121234567"))
+    }
+
+    @Test
+    fun `country code without plus is accepted when it matches the default`() {
+        assertEquals("+989121234567", canonicalOf("989121234567"))
+    }
+
+    @Test
+    fun `iranian mobile without trunk zero is accepted`() {
+        assertEquals("+989121234567", canonicalOf("9121234567"))
+    }
+
+    @Test
+    fun `bare digits with a foreign country code are ambiguous and invalid`() {
+        val result = PhoneNumberNormalizer.normalize("14155552671")
+        assertIs<NormalizedPhoneNumber.Invalid>(result)
+    }
 }

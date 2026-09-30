@@ -41,6 +41,28 @@ class MissedCallEvaluator(private val config: MissedCallRuleConfig = MissedCallR
     private val resetMarkerByContact = mutableMapOf<TrustedContactId, Instant>()
     private val cooldownUntilByContact = mutableMapOf<TrustedContactId, Instant>()
 
+    /**
+     * Epoch-millis snapshot for durable storage (see [com.whereareyou.core.security.StateCodec]).
+     * Android may kill the process between broadcasts, so counters must survive restarts.
+     */
+    fun exportState(): Map<String, List<Long>> = buildMap {
+        callsByContact.forEach { (id, calls) -> put("c:${id.value}", calls.map { it.toEpochMilli() }) }
+        resetMarkerByContact.forEach { (id, at) -> put("r:${id.value}", listOf(at.toEpochMilli())) }
+        cooldownUntilByContact.forEach { (id, at) -> put("d:${id.value}", listOf(at.toEpochMilli())) }
+    }
+
+    fun restoreState(state: Map<String, List<Long>>) {
+        callsByContact.clear(); resetMarkerByContact.clear(); cooldownUntilByContact.clear()
+        state.forEach { (key, values) ->
+            val id = TrustedContactId(key.drop(2))
+            when (key.take(2)) {
+                "c:" -> callsByContact[id] = values.map(Instant::ofEpochMilli).toMutableList()
+                "r:" -> values.firstOrNull()?.let { resetMarkerByContact[id] = Instant.ofEpochMilli(it) }
+                "d:" -> values.firstOrNull()?.let { cooldownUntilByContact[id] = Instant.ofEpochMilli(it) }
+            }
+        }
+    }
+
     /** Records a missed call and evaluates whether the rule now fires for [contactId]. */
     fun onMissedCall(contactId: TrustedContactId, at: Instant): MissedCallEvaluation {
         val cooldownUntil = cooldownUntilByContact[contactId]
@@ -49,6 +71,8 @@ class MissedCallEvaluator(private val config: MissedCallRuleConfig = MissedCallR
         }
 
         val calls = callsByContact.getOrPut(contactId) { mutableListOf() }
+        val windowStart = at.minus(config.window)
+        calls.removeAll { it.isBefore(windowStart) } // bound memory: expired calls can never count again
         calls.add(at)
 
         val relevant = relevantCalls(contactId, calls, at)

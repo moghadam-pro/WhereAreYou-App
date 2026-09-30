@@ -11,9 +11,9 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [TrustedContactEntity::class],
     version = 1,
-    // Schema export can be turned on later (with a configured schema directory) once
-    // migrations matter; not worth the build-config overhead for a single-table Phase 1A.
-    exportSchema = false,
+    // Schemas are exported to app/schemas (see ksp arg in build.gradle.kts) and committed, so
+    // every version bump needs a reviewed Migration — never fallbackToDestructiveMigration.
+    exportSchema = true,
 )
 abstract class WhereAreYouDatabase : RoomDatabase() {
     abstract fun trustedContactDao(): TrustedContactDao

@@ -16,6 +16,19 @@ class RateLimiter(private val maxEvents: Int, private val window: Duration) {
 
     private val eventsByKey = mutableMapOf<String, MutableList<Instant>>()
 
+    /** Epoch-millis snapshot for durable storage; see [StateCodec]. */
+    fun exportState(): Map<String, List<Long>> = eventsByKey.mapValues { (_, v) -> v.map { it.toEpochMilli() } }
+
+    /** Restores a snapshot from [exportState], dropping events already outside the window at [now]. */
+    fun restoreState(state: Map<String, List<Long>>, now: Instant) {
+        eventsByKey.clear()
+        val windowStart = now.minus(window)
+        state.forEach { (k, v) ->
+            val kept = v.map(Instant::ofEpochMilli).filter { !it.isBefore(windowStart) }.toMutableList()
+            if (kept.isNotEmpty()) eventsByKey[k] = kept
+        }
+    }
+
     /** Returns true and records the attempt if [key] is under its limit at [at]; false otherwise. */
     fun tryAcquire(key: String, at: Instant): Boolean {
         val events = eventsByKey.getOrPut(key) { mutableListOf() }

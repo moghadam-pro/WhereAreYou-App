@@ -4,10 +4,15 @@ import android.content.Context
 import androidx.room.Room
 import com.whereareyou.app.contacts.TrustedContactRepository
 import com.whereareyou.app.persistence.RuleSettingsStore
+import com.whereareyou.app.persistence.TriggerStateStore
 import com.whereareyou.app.persistence.WhereAreYouDatabase
 import com.whereareyou.core.rules.MissedCallEvaluator
 import com.whereareyou.core.rules.TriggerEngine
+import com.whereareyou.core.security.RateLimiter
+import com.whereareyou.core.security.ReplayGuard
 import com.whereareyou.core.security.SmsCommandAuthenticator
+import java.time.Duration
+import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 
@@ -28,6 +33,12 @@ interface AppContainer {
     val ruleSettingsStore: RuleSettingsStore
     val contactRepository: TrustedContactRepository
     val triggerEngine: TriggerEngine
+
+    /** Restores persisted rule state; call once, before the first event is evaluated. */
+    suspend fun restoreTriggerState()
+
+    /** Persists rule state; call after every evaluated event (cheap: timestamps only). */
+    suspend fun persistTriggerState()
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -53,9 +64,30 @@ class DefaultAppContainer(context: Context) : AppContainer {
     // RuleSettingsStore without losing in-flight window state is deferred until a
     // platform event adapter actually calls triggerEngine.evaluate(...) (Phase 1C/1D) —
     // nothing in this build does yet.
+    private val triggerStateStore = TriggerStateStore(context.applicationContext)
+    private val missedCallEvaluator = MissedCallEvaluator(RuleSettingsStore.DEFAULT)
+    private val replayGuard = ReplayGuard()
+    private val commandRateLimiter = RateLimiter(maxEvents = 5, window = Duration.ofHours(1))
+    private val failureLimiter = RateLimiter(maxEvents = 10, window = Duration.ofHours(1))
+
     override val triggerEngine: TriggerEngine = TriggerEngine(
         contacts = contactRepository.contactLookup,
-        missedCallEvaluator = MissedCallEvaluator(RuleSettingsStore.DEFAULT),
-        smsCommandAuthorizer = SmsCommandAuthenticator(),
+        missedCallEvaluator = missedCallEvaluator,
+        smsCommandAuthorizer = SmsCommandAuthenticator(replayGuard, commandRateLimiter, failureLimiter),
     )
+
+    override suspend fun restoreTriggerState() {
+        val now = Instant.now()
+        missedCallEvaluator.restoreState(triggerStateStore.load("missed_calls"))
+        replayGuard.restoreState(triggerStateStore.load("replay"), now)
+        commandRateLimiter.restoreState(triggerStateStore.load("command_rate"), now)
+        failureLimiter.restoreState(triggerStateStore.load("failed_codes"), now)
+    }
+
+    override suspend fun persistTriggerState() {
+        triggerStateStore.save("missed_calls", missedCallEvaluator.exportState())
+        triggerStateStore.save("replay", replayGuard.exportState())
+        triggerStateStore.save("command_rate", commandRateLimiter.exportState())
+        triggerStateStore.save("failed_codes", failureLimiter.exportState())
+    }
 }

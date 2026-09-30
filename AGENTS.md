@@ -272,3 +272,16 @@ The first PR/commit series should aim for:
 7. only then wire real SMS/call/location platform receivers.
 
 Keep commits small and document any Android restriction that forces deviation from the spec.
+
+## Versioning, releases and secrets (mandatory for every agent)
+
+Full rules: `docs/RELEASING.md`. In short:
+
+- SemVer; the version lives **only** in `VERSION_NAME` in `gradle.properties`. `versionCode` is derived (`MAJOR*10000 + MINOR*100 + PATCH`); never hard-code either.
+- Every user-visible change adds a line under `## [Unreleased]` in `CHANGELOG.md`. Releases are cut by tagging `vX.Y.Z` (tag must equal `VERSION_NAME`); CI publishes the signed APK.
+- Conventional Commits (`feat:`, `fix:`, `docs:`, ...).
+- **Never commit signing keys, keystores, `keystore.properties`, passwords or tokens**, and never add default/fallback secrets in build files.
+- Dependency versions go in `gradle/libs.versions.toml` only.
+- Room schema change = bump version + `Migration` + committed `app/schemas/*.json`; no destructive fallback.
+- Rule/security state that must survive process death (missed-call counters, replay guard, rate limits) is persisted through `AppContainer.persistTriggerState()`; call it after every evaluated event once receivers exist.
+

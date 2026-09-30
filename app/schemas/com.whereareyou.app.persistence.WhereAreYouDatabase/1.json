@@ -1,0 +1,94 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "05d6835a91dc6baaabef6a2e0423edb9",
+    "entities": [
+      {
+        "tableName": "trusted_contacts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `displayName` TEXT NOT NULL, `canonicalPhoneNumber` TEXT NOT NULL, `displayPhoneNumber` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `missedCallTrigger` INTEGER NOT NULL, `smsCommand` INTEGER NOT NULL, `receiveLowBatteryAlert` INTEGER NOT NULL, `manualStatusRecipient` INTEGER NOT NULL, `emergencyCallbackMode` TEXT NOT NULL, `commandSecret` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalPhoneNumber",
+            "columnName": "canonicalPhoneNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayPhoneNumber",
+            "columnName": "displayPhoneNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "missedCallTrigger",
+            "columnName": "missedCallTrigger",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "smsCommand",
+            "columnName": "smsCommand",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiveLowBatteryAlert",
+            "columnName": "receiveLowBatteryAlert",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "manualStatusRecipient",
+            "columnName": "manualStatusRecipient",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emergencyCallbackMode",
+            "columnName": "emergencyCallbackMode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "commandSecret",
+            "columnName": "commandSecret",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '05d6835a91dc6baaabef6a2e0423edb9')"
+    ]
+  }
+}

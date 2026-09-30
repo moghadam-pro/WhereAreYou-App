@@ -90,7 +90,7 @@ class TriggerEngine(
     private fun handleAnsweredCall(event: TriggerEvent.AnsweredCallObserved) {
         val contact = resolveContact(event.rawNumber) ?: return
         missedCallEvaluator.onAnsweredCall(contact.id, event.occurredAt)
-        aggregateMissedCallEvaluator?.onAnsweredCall(event.occurredAt)
+        aggregateMissedCallEvaluator?.onAnsweredCall(contact.id, event.occurredAt)
     }
 
     private fun handleSmsCommand(event: TriggerEvent.SmsCommandReceived): SafetyTrigger? {

@@ -20,6 +20,19 @@ class ReplayGuard(private val ttl: Duration = Duration.ofMinutes(5), private val
 
     private val lastSeenAt = LinkedHashMap<String, Instant>()
 
+    /** Epoch-millis snapshot for durable storage; see [StateCodec]. */
+    fun exportState(): Map<String, List<Long>> = lastSeenAt.mapValues { listOf(it.value.toEpochMilli()) }
+
+    /** Restores a snapshot from [exportState], dropping entries already older than [ttl] at [now]. */
+    fun restoreState(state: Map<String, List<Long>>, now: Instant) {
+        lastSeenAt.clear()
+        state.entries
+            .mapNotNull { (k, v) -> v.firstOrNull()?.let { k to Instant.ofEpochMilli(it) } }
+            .filter { (_, at) -> Duration.between(at, now).abs() < ttl }
+            .sortedBy { it.second }
+            .forEach { (k, at) -> lastSeenAt[k] = at }
+    }
+
     /** Returns true and records [key]@[at] if it is not a replay within [ttl]; false if it is. */
     fun recordIfNew(key: String, at: Instant): Boolean {
         val last = lastSeenAt[key]

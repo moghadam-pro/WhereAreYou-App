@@ -111,18 +111,16 @@ require a materially different permission strategy.
 
 ### Installing a release build / راهنمای نصب و رفع خطای نصب
 
-Releases are signed **Release APKs** (`com.whereareyou.app`) signed with a persistent project keystore (`keystore/release.jks`) supporting APK Signature Scheme v1, v2, and v3.
+Releases are signed **Release APKs** (`com.whereareyou.app`) signed with the project release key (kept out of the repository, see `docs/RELEASING.md`) supporting APK Signature Scheme v1, v2, and v3.
 
 #### ۱. دریافت فایل نصبی (Download APK)
-* **از روی سیستم محلی (Local - آماده و سریع):** فایل پکیج به صورت کامل بیلد شده و در ریشه پروژه قرار دارد:
-  [`DadFinder-v0.1.0-release.apk`](DadFinder-v0.1.0-release.apk)
 * **از گیت‌هاب (GitHub Releases):** می‌توانید فایل APK را مستقیماً از بخش [GitHub Releases](../../releases) دریافت کنید.
 
 #### ۲. مراحل نصب صحیح روی گوشی و رفع خطای `App not installed`
 اگر در هنگام نصب با اخطار Google Play Protect یا پیام **"App not installed"** مواجه شدید، به ترتیب زیر عمل کنید:
 
 1. **حذف نسخه قبلی (Uninstall Previous Version):**
-   اگر از قبل نسخه‌ای از برنامه (یا نسخه تستی قبلی) روی گوشی نصب است، حتماً ابتدا آن را حذف (Uninstall) کنید تا خطای تداخل امضا (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) رخ ندهد.
+   اگر از قبل نسخه‌ای از برنامه (به‌ویژه ۰٫۱٫۰ که با کلید قدیمی و لو‌رفته امضا شده بود) روی گوشی نصب است، حتماً ابتدا آن را حذف (Uninstall) کنید تا خطای تداخل امضا (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) رخ ندهد.
 2. **عبور صحیح از پنجره اخطار Google Play Protect:**
    به دلیل نصب فایل خارج از گوگل‌پلی (Sideload) و داشتن دسترسی‌های حساس پیامک و تماس و موقعیت مکانی، اخطار زیر نمایش داده می‌شود:
    > *"App blocked to protect your device — Play Protect hasn't seen an app from this developer before"*
@@ -135,7 +133,7 @@ Releases are signed **Release APKs** (`com.whereareyou.app`) signed with a persi
    * **تنظیمات (Settings) ➔ امنیت و حریم خصوصی (Security and privacy) ➔ مسدودکننده خودکار (Auto Blocker) ➔ خاموش (Off)**
 4. **تغییرات فنی انجام‌شده در نسخه Release:**
    * پورت‌های دیباگ بسته شده‌اند (`debuggable = false`) تا توسط اسکنرهای امنیتی بلاک نشود.
-   * برنامه با کلید پایدار `keystore/release.jks` و هر سه طرح امضای استاندارد اندروید (v1 JAR + v2 Full APK + v3) امضا شده است.
+   * برنامه با کلید پایدار پروژه (خارج از مخزن) و هر سه طرح امضای استاندارد اندروید (v1 JAR + v2 Full APK + v3) امضا شده است.
    * وابستگی‌های سخت‌افزاری (`telephony` و `location`) اختیاری (`android:required="false"`) شده‌اند تا ناسازگاری دستگاهی ایجاد نشود.
    * حجم برنامه بهینه شده و به **۷.۹ مگابایت** کاهش یافته است.
 

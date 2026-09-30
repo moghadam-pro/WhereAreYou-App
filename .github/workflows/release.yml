@@ -1,0 +1,75 @@
+name: Release
+
+# Publishes a signed APK when a SemVer tag is pushed:  git tag vX.Y.Z && git push origin vX.Y.Z
+# The tag MUST equal VERSION_NAME in gradle.properties (checked below). See docs/RELEASING.md.
+# Required repository secrets: RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD,
+# RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD. Without them this workflow fails - it never
+# publishes an unsigned or default-signed build.
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag must match VERSION_NAME
+        run: |
+          VERSION="$(sed -n 's/^VERSION_NAME=\(.*\)$/\1/p' gradle.properties)"
+          test -n "$VERSION"
+          if [ "v${VERSION}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION_NAME=${VERSION}"
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Core unit tests
+        run: ./gradlew :core:test --stacktrace
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_B64"
+          mkdir -p keystore
+          echo "$KEYSTORE_B64" | base64 -d > keystore/release.jks
+
+      - name: Build signed release APK
+        env:
+          RELEASE_STORE_FILE: keystore/release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Name and checksum the APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/DadFinder-${VERSION}.apk"
+          (cd dist && sha256sum "DadFinder-${VERSION}.apk" > "DadFinder-${VERSION}.apk.sha256")
+
+      - name: Extract this version's changelog section
+        run: |
+          awk -v v="[${VERSION}]" 'index($0, "## " v) == 1 {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > release-notes.md
+          test -s release-notes.md || echo "See CHANGELOG.md" > release-notes.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: "DadFinder ${{ env.VERSION }}"
+          body_path: release-notes.md
+          prerelease: ${{ contains(env.VERSION, '-') || startsWith(env.VERSION, '0.') }}
+          files: dist/*

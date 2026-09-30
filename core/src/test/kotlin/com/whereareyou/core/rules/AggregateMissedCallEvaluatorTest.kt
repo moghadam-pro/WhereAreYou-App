@@ -30,10 +30,19 @@ class AggregateMissedCallEvaluatorTest {
     }
 
     @Test
+    fun `answered call from one contact does not clear another contacts misses`() {
+        val eval = AggregateMissedCallEvaluator(AggregateMissedCallRuleConfig(enabled = true, threshold = 2))
+        eval.onMissedCall(contactA, base)
+        eval.onAnsweredCall(contactB, base.plus(Duration.ofMinutes(1)))
+        val result = eval.onMissedCall(contactB, base.plus(Duration.ofMinutes(2)))
+        assertIs<MissedCallEvaluation.Triggered>(result)
+    }
+
+    @Test
     fun `answered call clears the shared counter`() {
         val eval = AggregateMissedCallEvaluator(AggregateMissedCallRuleConfig(enabled = true, threshold = 2))
         eval.onMissedCall(contactA, base)
-        eval.onAnsweredCall(base.plus(Duration.ofMinutes(1)))
+        eval.onAnsweredCall(contactA, base.plus(Duration.ofMinutes(1)))
         val result = eval.onMissedCall(contactB, base.plus(Duration.ofMinutes(2)))
         assertIs<MissedCallEvaluation.NotTriggered>(result)
     }

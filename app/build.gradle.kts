@@ -1,11 +1,29 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id("com.android.application")
-    kotlin("android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
+
+// Version: single source is VERSION_NAME in gradle.properties (docs/RELEASING.md).
+// versionCode = MAJOR*10000 + MINOR*100 + PATCH, so it is monotonic for any SemVer bump
+// and never depends on CI run numbers. Pre-release suffixes (-beta.1) do not change it.
+val appVersionName: String = providers.gradleProperty("VERSION_NAME").get()
+val appVersionCode: Int = Regex("""^(\d+)\.(\d+)\.(\d+)""").find(appVersionName)
+    ?.destructured
+    ?.let { (major, minor, patch) -> major.toInt() * 10_000 + minor.toInt() * 100 + patch.toInt() }
+    ?: error("VERSION_NAME '$appVersionName' is not SemVer MAJOR.MINOR.PATCH")
+
+// Release signing secrets come from keystore.properties (gitignored) or environment
+// variables (CI). They are never committed and have no defaults.
+val keystoreProps = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
+}
+fun signingValue(propKey: String, envKey: String): String? =
+    keystoreProps.getProperty(propKey) ?: System.getenv(envKey)
 
 android {
     namespace = "com.whereareyou.app"
@@ -15,42 +33,35 @@ android {
         applicationId = "com.whereareyou.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {
-        create("release") {
-            val keystoreFile = rootProject.file("keystore/release.jks")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = project.findProperty("KEYSTORE_PASSWORD") as? String ?: "dadfinder_release_pass"
-                keyAlias = project.findProperty("KEY_ALIAS") as? String ?: "dadfinder"
-                keyPassword = project.findProperty("KEY_PASSWORD") as? String ?: "dadfinder_release_pass"
-                enableV1Signing = true
-                enableV2Signing = true
-                enableV3Signing = true
+        val storePath = signingValue("storeFile", "RELEASE_STORE_FILE")
+        if (storePath != null) {
+            create("release") {
+                storeFile = rootProject.file(storePath)
+                storePassword = signingValue("storePassword", "RELEASE_STORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "RELEASE_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "RELEASE_KEY_PASSWORD")
             }
-        }
-        getByName("debug") {
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
         }
     }
 
     buildTypes {
         debug {
-            // Installable side by side with a future release build, and obvious on the
-            // launcher that this is a test build of an unfinished Phase 1A/1B app.
+            // Installable side by side with a release build.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
         }
         release {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Without signing secrets the release build is produced unsigned (never with a
+            // shared/default key); CI and docs/RELEASING.md supply the real signing config.
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
 
@@ -77,26 +88,30 @@ kotlin {
 dependencies {
     implementation(project(":core"))
 
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
-    implementation(composeBom)
+    implementation(platform(libs.androidx.compose.bom))
 
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.navigation:navigation-compose:2.8.5")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.navigation.compose)
 
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-core")
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
 
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation(libs.androidx.datastore.preferences)
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+ksp {
+    // Exported schemas make Room migrations reviewable and testable.
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
