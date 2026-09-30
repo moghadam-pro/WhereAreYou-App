@@ -19,6 +19,26 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = rootProject.file("keystore/release.jks")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = project.findProperty("KEYSTORE_PASSWORD") as? String ?: "dadfinder_release_pass"
+                keyAlias = project.findProperty("KEY_ALIAS") as? String ?: "dadfinder"
+                keyPassword = project.findProperty("KEY_PASSWORD") as? String ?: "dadfinder_release_pass"
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+        getByName("debug") {
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
+    }
+
     buildTypes {
         debug {
             // Installable side by side with a future release build, and obvious on the
@@ -26,9 +46,11 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

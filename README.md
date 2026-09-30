@@ -111,12 +111,14 @@ require a materially different permission strategy.
 
 ### Installing a release build
 
-Releases are **beta, debug-signed** APKs. Their application ID is
-`com.whereareyou.app.debug`, so they install alongside any future release build, and
-Android will warn that the app comes from an unknown source — you have to allow your
-browser or file manager to install it. Because they are debug-signed with a throwaway key,
-these builds cannot be upgraded in place to a future production-signed release; you would
-uninstall and reinstall.
+Releases are signed **Release APKs** (`com.whereareyou.app`) signed with a persistent project keystore (supporting APK Signature Scheme v1, v2, and v3).
+
+Because the APK is sideloaded directly (outside Google Play) and declares SMS/Call Log/Location safety permissions:
+1. **Google Play Protect**: Android will prompt: *"App blocked to protect your device — Play Protect hasn't seen an app from this developer before"*.
+   - Tap **"Install anyway"** (نصب در هر حال) to proceed.
+   - **Do NOT tap "Got it"** (متوجه شدم) — tapping "Got it" cancels the installation and results in *"App not installed"*.
+2. **Samsung Devices (One UI 6+)**: Ensure **Auto Blocker (مسدودکننده خودکار)** in *Settings > Security and Privacy* is temporarily toggled off if it blocks sideloading.
+3. **Upgrade from older debug builds**: If an earlier test build with a different signature was previously installed, **uninstall it first** before installing the release build to prevent `INSTALL_FAILED_UPDATE_INCOMPATIBLE` ("App not installed").
 
 ## Recent Updates (Phase 1A/1B+ Readiness Milestone)
 

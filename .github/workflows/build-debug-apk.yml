@@ -1,4 +1,4 @@
-name: Build debug APK
+name: Build release APK
 
 # Manual/on-demand build of the Phase 1A/1B Protect app as an installable debug APK.
 #
@@ -56,10 +56,10 @@ jobs:
       - name: Run :core unit tests
         run: ./gradlew :core:test --no-daemon --stacktrace
 
-      - name: Build debug APK
+      - name: Build release APK
         run: |
           set +e
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace > gradle-info.log 2>&1
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace > gradle-info.log 2>&1
           BUILD_EXIT=$?
           if [ "$BUILD_EXIT" -ne 0 ]; then
             echo "=== 'What went wrong' failure summary block ==="
@@ -82,14 +82,14 @@ jobs:
           VERSION_NAME="$(sed -n 's/.*versionName *= *"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
           test -n "$VERSION_NAME"
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/WhereAreYou-${VERSION_NAME}-beta-build${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "dist/DadFinder-${VERSION_NAME}-release-build${{ github.run_number }}.apk"
           echo "version=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
           ls -l dist
 
-      - name: Upload debug APK
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: whereareyou-debug-apk
+          name: dadfinder-release-apk
           path: dist/*.apk
           if-no-files-found: error
           retention-days: 30
